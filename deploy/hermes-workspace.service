@@ -1,0 +1,18 @@
+[Unit]
+Description=Hermes Workspace
+After=network.target hermes-gateway.service
+Wants=hermes-gateway.service
+
+[Service]
+Type=simple
+User=nick
+WorkingDirectory=/home/nick/projects/hermes-workspace
+ExecStart=/usr/bin/node --import tsx server/production.ts
+Environment=NODE_ENV=production
+Environment=PORT=3001
+Environment=HERMES_GATEWAY_URL=http://127.0.0.1:8642
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
