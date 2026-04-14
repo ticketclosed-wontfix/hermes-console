@@ -46,10 +46,10 @@
 ## Milestone 5: Polish + Deploy
 | # | Feature | Status | Tests | Notes |
 |---|---------|--------|-------|-------|
-| 5.1 | Keyboard shortcuts | pending | e2e | |
-| 5.2 | Session fork | pending | e2e | |
-| 5.3 | Session export | pending | unit | |
-| 5.4 | systemd service | pending | — | |
+| 5.1 | Keyboard shortcuts (Ctrl+K/N, Escape) | done | unit | useKeyboardShortcuts hook |
+| 5.2 | Session fork | done | unit | POST /api/sessions/:id/fork |
+| 5.3 | Session export (markdown + JSON) | done | unit | GET /api/sessions/:id/export |
+| 5.4 | Production server + systemd service | done | — | server/production.ts + deploy/ |
 | 5.5 | Cloudflare tunnel (optional) | pending | — | |
 
 ## GLM5.1 Learnings
