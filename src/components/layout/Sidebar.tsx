@@ -1,15 +1,18 @@
 import { useEffect, useMemo } from 'react';
-import { Search, Plus, Settings, MessageSquare, LayoutDashboard, Clock, Puzzle, Brain } from 'lucide-react';
+import { Search, Plus, Settings, MessageSquare, LayoutDashboard, Clock, Puzzle, Brain, FolderOpen, Terminal } from 'lucide-react';
 import { useSessionsStore } from '@/stores/sessions';
 import { Link, useLocation } from '@tanstack/react-router';
 
-type NavItem = { path: '/' | '/dashboard' | '/jobs' | '/skills' | '/memory' | '/settings'; label: string; icon: typeof MessageSquare };
+type NavItem = { path: '/' | '/dashboard' | '/jobs' | '/skills' | '/memory' | '/files' | '/search' | '/terminal' | '/settings'; label: string; icon: typeof MessageSquare };
 const NAV_ITEMS: NavItem[] = [
   { path: '/', label: 'CHAT', icon: MessageSquare },
   { path: '/dashboard', label: 'DASH', icon: LayoutDashboard },
   { path: '/jobs', label: 'JOBS', icon: Clock },
   { path: '/skills', label: 'SKILLS', icon: Puzzle },
   { path: '/memory', label: 'MEM', icon: Brain },
+  { path: '/files', label: 'FILES', icon: FolderOpen },
+  { path: '/search', label: 'FIND', icon: Search },
+  { path: '/terminal', label: 'TERM', icon: Terminal },
   { path: '/settings', label: 'CFG', icon: Settings },
 ];
 

@@ -195,6 +195,51 @@ export async function updateJob(
   })
 }
 
+// ── Files types + API ───────────────────────────────────
+
+export type FileEntry = {
+  name: string
+  path: string
+  type: 'file' | 'directory'
+  size?: number
+  children?: FileEntry[]
+}
+
+export type FileContent = {
+  type: 'file'
+  path: string
+  name: string
+  size: number
+  content: string
+}
+
+export async function fetchFileTree() {
+  return apiFetch<{ tree: FileEntry[]; root: string }>('/files')
+}
+
+export async function fetchFile(filePath: string) {
+  return apiFetch<FileContent>(`/files/${filePath}`)
+}
+
+// ── Search types + API ──────────────────────────────────
+
+export type SearchHit = {
+  session_id: string
+  session_title: string | null
+  model: string | null
+  started_at: number
+  message_id: number
+  role: string
+  snippet: string
+  timestamp: number
+}
+
+export async function searchMessages(query: string, limit = 20, offset = 0) {
+  return apiFetch<{ items: SearchHit[]; total: number; query: string }>(
+    `/search?q=${encodeURIComponent(query)}&limit=${limit}&offset=${offset}`,
+  )
+}
+
 // ── SSE streaming chat ─────────────────────────────────
 
 export type ChatStreamEvent = {

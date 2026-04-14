@@ -1,16 +1,20 @@
 import express from 'express'
 import cors from 'cors'
+import { createServer } from 'http'
 import { createProxyMiddleware } from 'http-proxy-middleware'
 import { sessionsRouter } from './routes/sessions.js'
 import { skillsRouter } from './routes/skills.js'
 import { memoryRouter } from './routes/memory.js'
 import { healthRouter } from './routes/health.js'
 import { configRouter } from './routes/config.js'
+import { filesRouter } from './routes/files.js'
+import { searchRouter } from './routes/search.js'
+import { attachTerminalWs } from './terminal.js'
 
 const app = express()
 const PORT = Number(process.env.PORT || 3001)
 const GATEWAY_URL = process.env.HERMES_GATEWAY_URL || 'http://127.0.0.1:8642'
-const API_KEY = process.env.API_SERVER_KEY || ''
+const API_KEY = process.env.HERMES_API_KEY || ''
 
 app.use(cors({ origin: ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://10.0.30.200:3000'] }))
 app.use(express.json())
@@ -31,6 +35,8 @@ app.use('/api/skills', skillsRouter)
 app.use('/api/memory', memoryRouter)
 app.use('/api/health', healthRouter)
 app.use('/api/config', configRouter)
+app.use('/api/files', filesRouter)
+app.use('/api/search', searchRouter)
 
 // Proxy to gateway — chat, models, jobs, runs
 const gatewayProxy = createProxyMiddleware({
@@ -48,7 +54,11 @@ const gatewayProxy = createProxyMiddleware({
 app.use('/v1', gatewayProxy)
 app.use('/api/jobs', gatewayProxy)
 
-app.listen(PORT, '127.0.0.1', () => {
+// Create HTTP server + attach WebSocket terminal
+const server = createServer(app)
+attachTerminalWs(server)
+
+server.listen(PORT, '127.0.0.1', () => {
   console.log(`[hermes-workspace] middleware listening on http://127.0.0.1:${PORT}`)
   console.log(`[hermes-workspace] proxying to gateway at ${GATEWAY_URL}`)
 })

@@ -1,4 +1,7 @@
-node_modules\ndist\n.runtime\n*.gen.ts
+node_modules
+dist
+.runtime
+*.gen.ts
 .desloppify/
 scorecard.png
 test-results/
