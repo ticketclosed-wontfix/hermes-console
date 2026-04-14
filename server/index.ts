@@ -5,6 +5,7 @@ import { sessionsRouter } from './routes/sessions.js'
 import { skillsRouter } from './routes/skills.js'
 import { memoryRouter } from './routes/memory.js'
 import { healthRouter } from './routes/health.js'
+import { configRouter } from './routes/config.js'
 
 const app = express()
 const PORT = Number(process.env.PORT || 3001)
@@ -29,6 +30,7 @@ app.use('/api/sessions', sessionsRouter)
 app.use('/api/skills', skillsRouter)
 app.use('/api/memory', memoryRouter)
 app.use('/api/health', healthRouter)
+app.use('/api/config', configRouter)
 
 // Proxy to gateway — chat, models, jobs, runs
 const gatewayProxy = createProxyMiddleware({
