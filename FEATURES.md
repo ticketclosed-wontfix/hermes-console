@@ -39,9 +39,9 @@
 ## Milestone 4: Files + Session History + Terminal
 | # | Feature | Status | Tests | Notes |
 |---|---------|--------|-------|-------|
-| 4.1 | Filesystem API + file browser | pending | unit + e2e | |
-| 4.2 | Session history search (FTS5) | pending | unit + e2e | |
-| 4.3 | Embedded terminal (xterm.js) | pending | e2e | |
+| 4.1 | Filesystem API + file browser | done | unit | Tree view of ~/.hermes/, file viewer with line numbers |
+| 4.2 | Session history search (FTS5) | done | unit | Full-text search with snippets, grouped by session |
+| 4.3 | Embedded terminal (xterm.js) | done | — | node-pty over WebSocket, auto-fit, reconnect |
 
 ## Milestone 5: Polish + Deploy
 | # | Feature | Status | Tests | Notes |
