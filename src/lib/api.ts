@@ -108,6 +108,18 @@ export async function fetchMemory() {
   return apiFetch<MemoryData>('/memory')
 }
 
+// ── Config types + API ──────────────────────────────────
+
+export type ConfigData = {
+  config: string
+  soul: string
+  envVars: { key: string; hasValue: boolean }[]
+}
+
+export async function fetchConfig() {
+  return apiFetch<ConfigData>('/config')
+}
+
 // ── Jobs types + API ────────────────────────────────────
 
 export type Job = {

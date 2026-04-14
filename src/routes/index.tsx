@@ -6,7 +6,8 @@ import { useSessionsStore } from '@/stores/sessions'
 import { useChatStore } from '@/stores/chat'
 import { useEffect } from 'react'
 
-export const Route = createFileRoute('/')({\n  component: ChatPage,
+export const Route = createFileRoute('/')({
+  component: ChatPage,
 })
 
 function ChatPage() {
