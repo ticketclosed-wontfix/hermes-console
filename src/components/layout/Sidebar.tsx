@@ -1,7 +1,8 @@
 import { useEffect, useMemo } from 'react';
-import { Search, Plus, Settings, MessageSquare, LayoutDashboard, Clock, Puzzle, Brain, FolderOpen, Terminal } from 'lucide-react';
+import { Search, Plus, Settings, MessageSquare, LayoutDashboard, Clock, Puzzle, Brain, FolderOpen, Terminal, Download, FileJson, GitFork } from 'lucide-react';
 import { useSessionsStore } from '@/stores/sessions';
 import { Link, useLocation } from '@tanstack/react-router';
+import { exportSession, downloadBlob, forkSession } from '@/lib/api';
 
 type NavItem = { path: '/' | '/dashboard' | '/jobs' | '/skills' | '/memory' | '/files' | '/search' | '/terminal' | '/settings'; label: string; icon: typeof MessageSquare };
 const NAV_ITEMS: NavItem[] = [
@@ -154,30 +155,70 @@ export default function Sidebar() {
             {group.items.map((session) => {
               const isActive = activeSessionId === session.id;
               return (
-                <button
+                <div
                   key={session.id}
-                  onClick={() => setActive(session.id)}
-                  className={`w-full text-left px-2.5 py-2 rounded-md mb-0.5 transition-colors ${
-                    isActive
-                      ? 'border-l-2 border-primary bg-surface-container-high text-on-surface'
-                      : 'text-on-surface-variant/60 hover:text-on-surface hover:bg-surface-container-high'
-                  }`}
+                  className="group relative mb-0.5"
                 >
-                  <div className="truncate text-xs font-medium leading-tight">
-                    {session.title}
+                  <button
+                    onClick={() => setActive(session.id)}
+                    className={`w-full text-left px-2.5 py-2 rounded-md transition-colors ${
+                      isActive
+                        ? 'border-l-2 border-primary bg-surface-container-high text-on-surface'
+                        : 'text-on-surface-variant/60 hover:text-on-surface hover:bg-surface-container-high'
+                    }`}
+                  >
+                    <div className="truncate text-xs font-medium leading-tight pr-16">
+                      {session.title}
+                    </div>
+                    <div className="flex items-center gap-1.5 mt-1">
+                      <span className="text-[9px] bg-primary/10 px-1 border border-primary/20 rounded-sm font-label">
+                        {session.model}
+                      </span>
+                      <span className="text-[9px] text-on-surface-variant/50 font-label">
+                        {formatRelativeTime(session.started_at)}
+                      </span>
+                      <span className="text-[9px] text-on-surface-variant/50 font-label">
+                        {session.message_count} msgs
+                      </span>
+                    </div>
+                  </button>
+                  <div className="absolute right-1.5 top-1.5 hidden group-hover:flex items-center gap-0.5">
+                    <button
+                      title="Download as Markdown"
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        const blob = await exportSession(session.id, 'markdown');
+                        downloadBlob(blob, `session-${session.id}.md`);
+                      }}
+                      className="p-1 rounded hover:bg-surface-container-highest text-on-surface-variant/50 hover:text-on-surface transition-colors"
+                    >
+                      <Download size={12} />
+                    </button>
+                    <button
+                      title="Download as JSON"
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        const blob = await exportSession(session.id, 'json');
+                        downloadBlob(blob, `session-${session.id}.json`);
+                      }}
+                      className="p-1 rounded hover:bg-surface-container-highest text-on-surface-variant/50 hover:text-on-surface transition-colors"
+                    >
+                      <FileJson size={12} />
+                    </button>
+                    <button
+                      title="Fork session"
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        // Fork returns messages; for now just alert — full integration would set chat store and navigate
+                        const result = await forkSession(session.id);
+                        alert(`Forked ${result.messages.length} messages from "${result.source_session.title}". Navigate to Chat to continue.`);
+                      }}
+                      className="p-1 rounded hover:bg-surface-container-highest text-on-surface-variant/50 hover:text-on-surface transition-colors"
+                    >
+                      <GitFork size={12} />
+                    </button>
                   </div>
-                  <div className="flex items-center gap-1.5 mt-1">
-                    <span className="text-[9px] bg-primary/10 px-1 border border-primary/20 rounded-sm font-label">
-                      {session.model}
-                    </span>
-                    <span className="text-[9px] text-on-surface-variant/50 font-label">
-                      {formatRelativeTime(session.started_at)}
-                    </span>
-                    <span className="text-[9px] text-on-surface-variant/50 font-label">
-                      {session.message_count} msgs
-                    </span>
-                  </div>
-                </button>
+                </div>
               );
             })}
           </div>

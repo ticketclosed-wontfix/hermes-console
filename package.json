@@ -12,6 +12,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "start": "node --import tsx server/production.ts",
+    "build:prod": "npm run build && echo 'Production build ready'",
     "lint": "eslint ."
   },
   "dependencies": {

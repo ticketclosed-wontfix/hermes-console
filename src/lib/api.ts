@@ -240,6 +240,29 @@ export async function searchMessages(query: string, limit = 20, offset = 0) {
   )
 }
 
+// ── Export / Fork / Download ────────────────────────────
+
+export async function exportSession(id: string, format: 'markdown' | 'json'): Promise<Blob> {
+  const res = await fetch(`${API_BASE}/sessions/${id}/export?format=${format}`)
+  if (!res.ok) throw new Error(`Export failed: ${res.status}`)
+  return res.blob()
+}
+
+export function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+export async function forkSession(id: string) {
+  return apiFetch<{ messages: Message[]; source_session: Session }>(
+    `/sessions/${id}/fork`, { method: 'POST' }
+  )
+}
+
 // ── SSE streaming chat ─────────────────────────────────
 
 export type ChatStreamEvent = {
