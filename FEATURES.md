@@ -31,10 +31,10 @@
 ## Milestone 3: Skills + Memory + Settings
 | # | Feature | Status | Tests | Notes |
 |---|---------|--------|-------|-------|
-| 3.1 | Skills filesystem API | pending | unit | |
-| 3.2 | Skills browser UI | pending | e2e | |
-| 3.3 | Memory API + viewer | pending | unit + e2e | |
-| 3.4 | Config API + settings screen | pending | unit + e2e | |
+| 3.1 | Skills filesystem API | done | unit | Scan ~/.hermes/skills, parse frontmatter |
+| 3.2 | Skills browser UI | done | unit | Category tree, search, click-into detail view |
+| 3.3 | Memory API + viewer | done | unit | MEMORY.md + USER.md with capacity bars |
+| 3.4 | Config API + settings screen | done | unit | config.yaml, SOUL.md, env vars (redacted) |
 
 ## Milestone 4: Files + Session History + Terminal
 | # | Feature | Status | Tests | Notes |
