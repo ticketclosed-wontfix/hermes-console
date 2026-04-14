@@ -1,6 +1,14 @@
 import { useEffect, useMemo } from 'react';
-import { Search, Plus, Settings } from 'lucide-react';
+import { Search, Plus, Settings, MessageSquare, LayoutDashboard, Clock } from 'lucide-react';
 import { useSessionsStore } from '@/stores/sessions';
+import { Link, useLocation } from '@tanstack/react-router';
+
+type NavItem = { path: '/' | '/dashboard' | '/jobs'; label: string; icon: typeof MessageSquare };
+const NAV_ITEMS: NavItem[] = [
+  { path: '/', label: 'CHAT', icon: MessageSquare },
+  { path: '/dashboard', label: 'DASHBOARD', icon: LayoutDashboard },
+  { path: '/jobs', label: 'JOBS', icon: Clock },
+];
 
 function getGroupLabel(date: Date): string {
   const now = new Date();
@@ -30,6 +38,8 @@ function formatRelativeTime(unixSeconds: number): string {
 export default function Sidebar() {
   const { sessions, load, search, setActive, activeSessionId, searchQuery, loading } =
     useSessionsStore();
+  const location = useLocation();
+  const isChat = location.pathname === '/';
 
   useEffect(() => {
     load();
@@ -65,33 +75,59 @@ export default function Sidebar() {
         </span>
       </div>
 
-      {/* Search */}
-      <div className="px-3 py-2">
-        <div className="relative">
-          <Search
-            size={12}
-            className="absolute left-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant/50"
-          />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => search(e.target.value)}
-            placeholder="SEARCH SESSIONS"
-            className="w-full bg-surface-container-lowest text-on-surface placeholder:text-on-surface-variant/40 font-label text-[10px] tracking-widest uppercase pl-7 pr-3 py-2 rounded-md outline-none focus:ring-1 focus:ring-primary/40"
-          />
-        </div>
-      </div>
+      {/* Navigation */}
+      <nav className="px-3 py-1 flex gap-1">
+        {NAV_ITEMS.map(({ path, label, icon: Icon }) => {
+          const active = path === '/' ? isChat : location.pathname === path;
+          return (
+            <Link
+              key={path}
+              to={path}
+              className={`flex-1 flex flex-col items-center gap-0.5 py-1.5 rounded-md transition-colors ${
+                active
+                  ? 'bg-primary/15 text-primary'
+                  : 'text-on-surface-variant/50 hover:text-on-surface hover:bg-surface-container-high'
+              }`}
+            >
+              <Icon size={14} />
+              <span className="font-label text-[8px] tracking-widest uppercase">{label}</span>
+            </Link>
+          );
+        })}
+      </nav>
 
-      {/* New Session Button */}
-      <div className="px-3 pb-2">
-        <button className="w-full flex items-center justify-center gap-1.5 bg-gradient-to-br from-primary to-primary-container text-on-primary font-label text-xs font-bold py-2 rounded-md hover:brightness-110 transition-all">
-          <Plus size={14} />
-          NEW_SESSION
-        </button>
-      </div>
+      {/* Search — chat only */}
+      {isChat && (
+        <>
+          <div className="px-3 py-2">
+            <div className="relative">
+              <Search
+                size={12}
+                className="absolute left-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant/50"
+              />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => search(e.target.value)}
+                placeholder="SEARCH SESSIONS"
+                className="w-full bg-surface-container-lowest text-on-surface placeholder:text-on-surface-variant/40 font-label text-[10px] tracking-widest uppercase pl-7 pr-3 py-2 rounded-md outline-none focus:ring-1 focus:ring-primary/40"
+              />
+            </div>
+          </div>
 
-      {/* Session List */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar px-2">
+          {/* New Session Button */}
+          <div className="px-3 pb-2">
+            <button className="w-full flex items-center justify-center gap-1.5 bg-gradient-to-br from-primary to-primary-container text-on-primary font-label text-xs font-bold py-2 rounded-md hover:brightness-110 transition-all">
+              <Plus size={14} />
+              NEW_SESSION
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* Session List — chat only */}
+      <div className="flex-1 overflow-y-auto custom-scrollbar px-2">{isChat && (<>
+
         {loading && sessions.length === 0 && (
           <div className="text-on-surface-variant/40 text-[10px] font-label tracking-widest uppercase text-center py-8">
             Loading...
@@ -140,6 +176,7 @@ export default function Sidebar() {
             })}
           </div>
         ))}
+      </>)}
       </div>
 
       {/* Bottom User Section */}

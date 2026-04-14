@@ -1,5 +1,4 @@
 import { createFileRoute } from '@tanstack/react-router'
-import Sidebar from '@/components/layout/Sidebar'
 import ChatThread from '@/components/chat/ChatThread'
 import ChatInput from '@/components/chat/ChatInput'
 import MetadataPanel from '@/components/chat/MetadataPanel'
@@ -7,8 +6,7 @@ import { useSessionsStore } from '@/stores/sessions'
 import { useChatStore } from '@/stores/chat'
 import { useEffect } from 'react'
 
-export const Route = createFileRoute('/')({
-  component: ChatPage,
+export const Route = createFileRoute('/')({\n  component: ChatPage,
 })
 
 function ChatPage() {
@@ -27,9 +25,7 @@ function ChatPage() {
   }, [activeSessionId, loadHistory, clearChat])
 
   return (
-    <div className="flex flex-1 h-full">
-      <Sidebar />
-
+    <div className="flex flex-1 h-full min-w-0">
       <main className="flex-1 flex flex-col bg-surface-container-lowest min-w-0">
         <header className="h-14 bg-surface-container-low/80 backdrop-blur-xl border-b border-outline-variant/15 flex items-center px-6 justify-between shrink-0">
           <div className="flex flex-col">

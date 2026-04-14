@@ -4,27 +4,29 @@
 
 | # | Feature | Status | Tests | Notes |
 |---|---------|--------|-------|-------|
-| 1.1 | Project scaffold (Vite + React + TanStack Router + Tailwind) | in-progress | — | |
-| 1.2 | Hermes Obsidian theme (Stitch design system) | pending | — | |
-| 1.3 | Express middleware + auth proxy to gateway | pending | unit | |
-| 1.4 | Session history API (read state.db) | pending | unit | |
-| 1.5 | Messages API (read state.db) | pending | unit | |
-| 1.6 | Sidebar — session list, search, date grouping | pending | unit + e2e | |
-| 1.7 | Chat message thread — markdown, code blocks, shiki | pending | unit + e2e | |
-| 1.8 | Tool call accordion component | pending | unit + e2e | |
-| 1.9 | Thinking/reasoning collapsible block | pending | unit | |
-| 1.10 | SSE streaming from gateway | pending | unit + e2e | |
-| 1.11 | Input area — textarea, model selector, send | pending | unit + e2e | |
-| 1.12 | Right metadata panel — stats, tokens, cost | pending | unit | |
-| 1.13 | Full integration — session create/switch/chat | pending | e2e | |
+| 1.1 | Project scaffold (Vite + React + TanStack Router + Tailwind) | done | — | |
+| 1.2 | Hermes Obsidian theme (Stitch design system) | done | — | |
+| 1.3 | Express middleware + auth proxy to gateway | done | unit | |
+| 1.4 | Session history API (read state.db) | done | unit | |
+| 1.5 | Messages API (read state.db) | done | unit | |
+| 1.6 | Sidebar — session list, search, date grouping | done | unit + e2e | |
+| 1.7 | Chat message thread — markdown, code blocks, shiki | done | unit + e2e | |
+| 1.8 | Tool call accordion component | done | unit + e2e | |
+| 1.9 | Thinking/reasoning collapsible block | done | unit | |
+| 1.10 | SSE streaming from gateway | done | unit + e2e | |
+| 1.11 | Input area — textarea, model selector, send | done | unit + e2e | |
+| 1.12 | Right metadata panel — stats, tokens, cost | done | unit | |
+| 1.13 | Full integration — session create/switch/chat | done | e2e | |
 
 ## Milestone 2: Dashboard + Jobs
 | # | Feature | Status | Tests | Notes |
 |---|---------|--------|-------|-------|
-| 2.1 | Dashboard — health, sessions, activity | pending | e2e | |
-| 2.2 | Cron jobs list view | pending | unit + e2e | |
-| 2.3 | Job actions — pause/resume/run/delete | pending | e2e | |
-| 2.4 | Create/edit job dialog | pending | e2e | |
+| 2.1 | Dashboard — health, sessions, activity | done | unit | Stats tiles, activity chart, recent sessions |
+| 2.2 | Cron jobs list view | done | unit + e2e | Job cards with expand/collapse details |
+| 2.3 | Job actions — pause/resume/run/delete | done | unit | Inline action buttons on each card |
+| 2.4 | Create/edit job dialog | done | — | Modal dialogs with form fields |
+| 2.5 | Sidebar navigation (Chat/Dashboard/Jobs) | done | — | Tab nav with route-aware active state |
+| 2.6 | Vite proxy fix for /v1 route | done | — | |
 
 ## Milestone 3: Skills + Memory + Settings
 | # | Feature | Status | Tests | Notes |

@@ -108,6 +108,81 @@ export async function fetchMemory() {
   return apiFetch<MemoryData>('/memory')
 }
 
+// ── Jobs types + API ────────────────────────────────────
+
+export type Job = {
+  id: string
+  name: string | null
+  prompt: string
+  skills: string[]
+  model: string | null
+  provider: string | null
+  schedule: { kind: string; expr: string; display: string }
+  schedule_display: string
+  repeat: { times: number | null; completed: number }
+  enabled: boolean
+  state: string
+  paused_at: string | null
+  created_at: string
+  next_run_at: string | null
+  last_run_at: string | null
+  last_status: string | null
+  last_error: string | null
+  deliver: string | null
+}
+
+export async function fetchJobs() {
+  return apiFetch<{ jobs: Job[] }>('/jobs')
+}
+
+export async function pauseJob(id: string) {
+  return apiFetch<{ ok: boolean }>(`/jobs/${id}`, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'pause' }),
+  })
+}
+
+export async function resumeJob(id: string) {
+  return apiFetch<{ ok: boolean }>(`/jobs/${id}`, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'resume' }),
+  })
+}
+
+export async function triggerJob(id: string) {
+  return apiFetch<{ ok: boolean }>(`/jobs/${id}`, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'run' }),
+  })
+}
+
+export async function deleteJob(id: string) {
+  return apiFetch<{ ok: boolean }>(`/jobs/${id}`, { method: 'DELETE' })
+}
+
+export async function createJob(input: {
+  name: string
+  schedule: string
+  prompt: string
+  skills?: string[]
+  deliver?: string
+}) {
+  return apiFetch<{ job: Job }>('/jobs', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  })
+}
+
+export async function updateJob(
+  id: string,
+  updates: { name?: string; schedule?: string; prompt?: string; skills?: string[]; deliver?: string },
+) {
+  return apiFetch<{ job: Job }>(`/jobs/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(updates),
+  })
+}
+
 // ── SSE streaming chat ─────────────────────────────────
 
 export type ChatStreamEvent = {

@@ -1,1 +1,4 @@
 node_modules\ndist\n.runtime\n*.gen.ts
+.desloppify/
+scorecard.png
+test-results/

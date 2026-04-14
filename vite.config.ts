@@ -19,6 +19,7 @@ export default defineConfig({
     port: 3000,
     proxy: {
       '/api': 'http://127.0.0.1:3001',
+      '/v1': 'http://127.0.0.1:3001',
     },
   },
 })
