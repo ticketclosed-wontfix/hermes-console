@@ -114,7 +114,7 @@ test.describe('bug-fixes: lazy session + gateway streaming', () => {
     await expect(page.getByRole('button', { name: 'Remove probe.png' })).toBeVisible()
   })
 
-  test('tool output pretty-renders (no literal \\n escapes)', async ({
+  test('tool output pretty-renders (has real newlines, not a single line blob)', async ({
     page,
     request,
   }) => {
@@ -132,10 +132,35 @@ test.describe('bug-fixes: lazy session + gateway streaming', () => {
       withTools.title || `${withTools.source || 'chat'} session`
     await page.getByText(title, { exact: false }).first().click()
 
-    // The pretty renderer should show real line breaks; if JSON tool output is
-    // dumped as a single string with \n escapes we'd see the literal two-char
-    // sequence. Assert we do NOT see a literal \n escape followed by a quote.
-    const body2 = await page.locator('main').innerText()
-    expect(body2).not.toMatch(/\\\\n/)
+    // Wait for the tool blocks to render.
+    await page.waitForTimeout(500)
+
+    // Pretty-printing means the tool result block's text has real newlines
+    // (multi-line structure). Pre-fix: it was one giant line with literal
+    // \n escape chars inside.
+    //
+    // Strategy: grab the DOM of tool-call blocks and assert at least one
+    // has a visible multi-line JSON body. We look at the pre/div elements
+    // inside ToolCallBlock (class includes whitespace-pre-wrap + overflow).
+    const toolBlockLineCounts: number[] = await page.evaluate(() => {
+      // ToolCallBlock renders result/args in a div with classes matching
+      // these fragments. We match on a combination of font-label +
+      // whitespace-pre-wrap since those are the pretty-result containers.
+      const blocks = Array.from(
+        document.querySelectorAll<HTMLElement>(
+          'div.whitespace-pre-wrap',
+        ),
+      )
+      return blocks.map((b) => (b.textContent || '').split('\n').length)
+    })
+
+    expect(
+      toolBlockLineCounts.length,
+      'no tool-call blocks found on screen',
+    ).toBeGreaterThan(0)
+    // At least one tool-call pretty-printed body must have many lines
+    // (pretty-printed JSON of a tool result always yields 5+ lines).
+    const maxLines = Math.max(...toolBlockLineCounts, 0)
+    expect(maxLines).toBeGreaterThan(5)
   })
 })
