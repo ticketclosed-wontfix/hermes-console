@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { Session } from '@/lib/api'
-import { fetchSessions, searchSessions } from '@/lib/api'
+import { fetchSessions, searchSessions, createSession } from '@/lib/api'
+import { useChatStore } from '@/stores/chat'
 
 type SessionsState = {
   sessions: Session[]
@@ -14,6 +15,7 @@ type SessionsState = {
   search: (query: string) => Promise<void>
   setActive: (id: string | null) => void
   clearSearch: () => void
+  create: () => Promise<Session | null>
 }
 
 export const useSessionsStore = create<SessionsState>((set, get) => ({
@@ -52,5 +54,22 @@ export const useSessionsStore = create<SessionsState>((set, get) => ({
   clearSearch: () => {
     set({ searchQuery: '' })
     get().load()
+  },
+
+  create: async () => {
+    try {
+      const { session } = await createSession({ source: 'workspace', model: 'hermes-agent' })
+      set((s) => ({
+        sessions: [session, ...s.sessions.filter((x) => x.id !== session.id)],
+        total: s.total + 1,
+        activeSessionId: session.id,
+      }))
+      // Clear chat pane for the fresh session
+      useChatStore.getState().clear()
+      return session
+    } catch (err) {
+      set({ error: String(err) })
+      return null
+    }
   },
 }))

@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { Search, Plus, Settings, MessageSquare, LayoutDashboard, Clock, Puzzle, Brain, FolderOpen, Terminal, Download, FileJson, GitFork } from 'lucide-react';
 import { useSessionsStore } from '@/stores/sessions';
-import { Link, useLocation } from '@tanstack/react-router';
+import { Link, useLocation, useNavigate } from '@tanstack/react-router';
 import { exportSession, downloadBlob, forkSession } from '@/lib/api';
 
 type NavItem = { path: '/' | '/dashboard' | '/jobs' | '/skills' | '/memory' | '/files' | '/search' | '/terminal' | '/settings'; label: string; icon: typeof MessageSquare };
@@ -43,14 +43,22 @@ function formatRelativeTime(unixSeconds: number): string {
 }
 
 export default function Sidebar() {
-  const { sessions, load, search, setActive, activeSessionId, searchQuery, loading } =
+  const { sessions, load, search, setActive, activeSessionId, searchQuery, loading, create } =
     useSessionsStore();
   const location = useLocation();
+  const navigate = useNavigate();
   const isChat = location.pathname === '/';
 
   useEffect(() => {
     load();
   }, [load]);
+
+  const handleNewSession = async () => {
+    const session = await create();
+    if (session && location.pathname !== '/') {
+      navigate({ to: '/' });
+    }
+  };
 
   const grouped = useMemo(() => {
     const groups: Record<string, typeof sessions> = {};
@@ -124,7 +132,10 @@ export default function Sidebar() {
 
           {/* New Session Button */}
           <div className="px-3 pb-2">
-            <button className="w-full flex items-center justify-center gap-1.5 bg-gradient-to-br from-primary to-primary-container text-on-primary font-label text-xs font-bold py-2 rounded-md hover:brightness-110 transition-all">
+            <button
+              onClick={handleNewSession}
+              className="w-full flex items-center justify-center gap-1.5 bg-gradient-to-br from-primary to-primary-container text-on-primary font-label text-xs font-bold py-2 rounded-md hover:brightness-110 transition-all"
+            >
               <Plus size={14} />
               NEW_SESSION
             </button>
@@ -168,7 +179,7 @@ export default function Sidebar() {
                     }`}
                   >
                     <div className="truncate text-xs font-medium leading-tight pr-16">
-                      {session.title}
+                      {session.title || `${session.source || 'chat'} session`}
                     </div>
                     <div className="flex items-center gap-1.5 mt-1">
                       <span className="text-[9px] bg-primary/10 px-1 border border-primary/20 rounded-sm font-label">

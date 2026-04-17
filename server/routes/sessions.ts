@@ -2,12 +2,17 @@ import { Router } from 'express'
 import Database from 'better-sqlite3'
 import path from 'path'
 import os from 'os'
+import { randomUUID } from 'crypto'
 
 const router = Router()
 const DB_PATH = path.join(os.homedir(), '.hermes', 'state.db')
 
 function getDb() {
   return new Database(DB_PATH, { readonly: true, fileMustExist: true })
+}
+
+function getWriteDb() {
+  return new Database(DB_PATH, { fileMustExist: true })
 }
 
 // GET /api/sessions — list sessions
@@ -39,6 +44,41 @@ router.get('/', (req, res) => {
     db.close()
 
     res.json({ items: sessions, total: total.count })
+  } catch (err) {
+    res.status(500).json({ error: String(err) })
+  }
+})
+
+// POST /api/sessions — create a new workspace session
+router.post('/', (req, res) => {
+  try {
+    const db = getWriteDb()
+    const id = randomUUID()
+    const now = Date.now() / 1000
+    const body = (req.body ?? {}) as {
+      source?: string
+      model?: string
+      title?: string | null
+      user_id?: string | null
+    }
+    db.prepare(`
+      INSERT INTO sessions (
+        id, source, user_id, model, title,
+        started_at, ended_at,
+        message_count, tool_call_count,
+        input_tokens, output_tokens, estimated_cost_usd
+      ) VALUES (?, ?, ?, ?, ?, ?, NULL, 0, 0, 0, 0, NULL)
+    `).run(
+      id,
+      body.source || 'workspace',
+      body.user_id ?? null,
+      body.model || 'hermes-agent',
+      body.title ?? null,
+      now,
+    )
+    const session = db.prepare('SELECT * FROM sessions WHERE id = ?').get(id)
+    db.close()
+    res.json({ session })
   } catch (err) {
     res.status(500).json({ error: String(err) })
   }

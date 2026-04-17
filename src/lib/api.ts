@@ -76,6 +76,17 @@ export async function fetchSession(id: string) {
   return apiFetch<{ session: Session }>(`/sessions/${id}`)
 }
 
+export async function createSession(input: {
+  source?: string
+  model?: string
+  title?: string | null
+} = {}) {
+  return apiFetch<{ session: Session }>('/sessions', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  })
+}
+
 export async function fetchMessages(sessionId: string) {
   return apiFetch<{ items: Message[]; total: number }>(
     `/sessions/${sessionId}/messages`,
@@ -270,8 +281,14 @@ export type ChatStreamEvent = {
   data: Record<string, unknown>
 }
 
+export type ChatContentPart =
+  | { type: 'text'; text: string }
+  | { type: 'image_url'; image_url: { url: string } }
+
+export type ChatMessageContent = string | ChatContentPart[]
+
 export async function* streamChat(
-  message: string,
+  message: ChatMessageContent,
   opts: {
     model?: string
     sessionId?: string
