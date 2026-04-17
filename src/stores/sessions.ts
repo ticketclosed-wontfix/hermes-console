@@ -15,7 +15,13 @@ type SessionsState = {
   search: (query: string) => Promise<void>
   setActive: (id: string | null) => void
   clearSearch: () => void
-  create: () => Promise<Session | null>
+
+  // Lazy: clears UI state only. No server call.
+  startNew: () => void
+
+  // Ensures there's a real persisted session id, creating one only if necessary.
+  // Called by chat store right before sending the first message.
+  ensureActiveSession: (opts?: { model?: string }) => Promise<Session | null>
 }
 
 export const useSessionsStore = create<SessionsState>((set, get) => ({
@@ -56,16 +62,30 @@ export const useSessionsStore = create<SessionsState>((set, get) => ({
     get().load()
   },
 
-  create: async () => {
+  // Lazy new-session: no DB row, no network call. The chat pane will show the
+  // empty state and the first sendMessage() will create the row via
+  // ensureActiveSession().
+  startNew: () => {
+    set({ activeSessionId: null, error: null })
+    useChatStore.getState().clear()
+  },
+
+  ensureActiveSession: async (opts = {}) => {
+    const { activeSessionId, sessions } = get()
+    if (activeSessionId) {
+      const existing = sessions.find((s) => s.id === activeSessionId)
+      if (existing) return existing
+    }
     try {
-      const { session } = await createSession({ source: 'workspace', model: 'hermes-agent' })
+      const { session } = await createSession({
+        source: 'workspace',
+        model: opts.model || 'hermes-agent',
+      })
       set((s) => ({
         sessions: [session, ...s.sessions.filter((x) => x.id !== session.id)],
         total: s.total + 1,
         activeSessionId: session.id,
       }))
-      // Clear chat pane for the fresh session
-      useChatStore.getState().clear()
       return session
     } catch (err) {
       set({ error: String(err) })

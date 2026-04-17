@@ -5,6 +5,7 @@ import { useSessionsStore } from '@/stores/sessions'
 vi.mock('@/lib/api', () => ({
   fetchSessions: vi.fn(),
   searchSessions: vi.fn(),
+  createSession: vi.fn(),
 }))
 
 import { fetchSessions, searchSessions } from '@/lib/api'

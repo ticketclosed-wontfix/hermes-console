@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { Message } from '@/lib/api'
 import { fetchMessages, streamChat } from '@/lib/api'
+import { useSessionsStore } from '@/stores/sessions'
 
 export type ContentPart =
   | { type: 'text'; text: string }
@@ -28,7 +29,10 @@ type ChatState = {
   abortController: AbortController | null
 
   loadHistory: (sessionId: string) => Promise<void>
-  sendMessage: (content: MessageContent, sessionId: string) => Promise<void>
+  // sessionId is optional. If missing or null, a new session is created lazily
+  // via sessions store's ensureActiveSession() — this is where the DB row first
+  // appears. Clicking NEW_SESSION 20 times does NOT create 20 rows.
+  sendMessage: (content: MessageContent, sessionId?: string | null) => Promise<void>
   cancelStreaming: () => void
   clear: () => void
 }
@@ -54,9 +58,28 @@ export const useChatStore = create<ChatState>((set, get) => ({
   abortController: null,
 
   loadHistory: async (sessionId) => {
+    // Guard against the lazy-creation race: when sendMessage() creates a
+    // session mid-flight, activeSessionId flips to the new id and the route
+    // useEffect re-fires loadHistory(). If we wiped messages here we'd drop
+    // the user+assistant msgs we just added. Bail if streaming is active OR
+    // if we already hold local (non-persisted) messages.
+    const cur = get()
+    if (cur.streaming) return
+    if (cur.messages.some((m) => !m.id.startsWith('db-'))) return
     set({ loading: true, error: null, messages: [] })
     try {
       const data = await fetchMessages(sessionId)
+      // Re-check AFTER the async fetch — sendMessage() may have inserted
+      // local messages and/or started streaming while fetchMessages was
+      // in flight. If so, do NOT overwrite them.
+      const now = get()
+      if (
+        now.streaming ||
+        now.messages.some((m) => !m.id.startsWith('db-'))
+      ) {
+        set({ loading: false })
+        return
+      }
       set({ messages: data.items.map(dbMessageToChat), loading: false })
     } catch (err) {
       set({ error: String(err), loading: false })
@@ -64,6 +87,22 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   sendMessage: async (content, sessionId) => {
+    // Lazy session resolution: if no sessionId was passed, ask the sessions
+    // store to ensure/create one NOW. This is the only path that creates a
+    // workspace session row.
+    let resolvedId: string | null = sessionId ?? null
+    if (!resolvedId) {
+      const session = await useSessionsStore
+        .getState()
+        .ensureActiveSession()
+      if (!session) {
+        set({ error: 'Failed to create session' })
+        return
+      }
+      resolvedId = session.id
+    }
+    const effectiveSessionId = resolvedId
+
     const userMsg: ChatMessage = {
       id: `user-${Date.now()}`,
       role: 'user',
@@ -89,7 +128,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
     try {
       for await (const event of streamChat(content, {
-        sessionId,
+        sessionId: effectiveSessionId,
         signal: controller.signal,
       })) {
         if (event.type === 'content') {

@@ -5,7 +5,8 @@ import os from 'os'
 import { randomUUID } from 'crypto'
 
 const router = Router()
-const DB_PATH = path.join(os.homedir(), '.hermes', 'state.db')
+const DB_PATH =
+  process.env.HERMES_STATE_DB || path.join(os.homedir(), '.hermes', 'state.db')
 
 function getDb() {
   return new Database(DB_PATH, { readonly: true, fileMustExist: true })

@@ -7,7 +7,15 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./tests/setup.ts'],
-    include: ['tests/unit/**/*.test.{ts,tsx}'],
+    include: [
+      'tests/unit/**/*.test.{ts,tsx}',
+      'tests/integration/**/*.test.{ts,tsx}',
+    ],
+    // Integration tests need real network + filesystem.
+    environmentMatchGlobs: [
+      ['tests/integration/**', 'node'],
+    ],
+    testTimeout: 15000,
   },
   resolve: {
     alias: {

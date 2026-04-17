@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Chat Application E2E Tests', () => {
-  const BASE_URL = 'http://127.0.0.1:3000';
+  const BASE_URL = process.env.HERMES_E2E_BASE_URL || 'http://127.0.0.1:3001';
 
   test('loads the app and shows sidebar with sessions', async ({ page }) => {
     await page.goto(BASE_URL);

@@ -39,8 +39,11 @@ export default function ChatInput() {
 
   const handleSend = useCallback(() => {
     const trimmed = text.trim();
-    if (!activeSessionId) return;
     if (!trimmed && attachments.length === 0) return;
+
+    // Lazy session: pass null when no active session — chat store will create
+    // one via sessions.ensureActiveSession() before actually streaming.
+    const sid = activeSessionId ?? null;
 
     if (attachments.length > 0) {
       const parts: ContentPart[] = [];
@@ -48,9 +51,9 @@ export default function ChatInput() {
       for (const att of attachments) {
         parts.push({ type: 'image_url', image_url: { url: att.dataUrl } });
       }
-      sendMessage(parts, activeSessionId);
+      sendMessage(parts, sid);
     } else {
-      sendMessage(trimmed, activeSessionId);
+      sendMessage(trimmed, sid);
     }
 
     setText('');
@@ -148,7 +151,7 @@ export default function ChatInput() {
     }
   }, [text]);
 
-  const sendDisabled = (!text.trim() && attachments.length === 0) || !activeSessionId;
+  const sendDisabled = !text.trim() && attachments.length === 0;
 
   return (
     <div className="p-6 bg-surface-container-low/50 border-t border-outline-variant/15">

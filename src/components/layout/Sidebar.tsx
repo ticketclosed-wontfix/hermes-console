@@ -43,7 +43,7 @@ function formatRelativeTime(unixSeconds: number): string {
 }
 
 export default function Sidebar() {
-  const { sessions, load, search, setActive, activeSessionId, searchQuery, loading, create } =
+  const { sessions, load, search, setActive, activeSessionId, searchQuery, loading, startNew } =
     useSessionsStore();
   const location = useLocation();
   const navigate = useNavigate();
@@ -53,9 +53,10 @@ export default function Sidebar() {
     load();
   }, [load]);
 
-  const handleNewSession = async () => {
-    const session = await create();
-    if (session && location.pathname !== '/') {
+  const handleNewSession = () => {
+    // Lazy: no server call, no DB row. Just clears UI. The first send creates it.
+    startNew();
+    if (location.pathname !== '/') {
       navigate({ to: '/' });
     }
   };
