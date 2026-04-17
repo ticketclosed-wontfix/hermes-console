@@ -1,11 +1,17 @@
 import { create } from 'zustand'
 import type { Message } from '@/lib/api'
-import { fetchMessages, streamChat, type ChatStreamEvent } from '@/lib/api'
+import { fetchMessages, streamChat } from '@/lib/api'
+
+export type ContentPart =
+  | { type: 'text'; text: string }
+  | { type: 'image_url'; image_url: { url: string } }
+
+export type MessageContent = string | ContentPart[]
 
 type ChatMessage = {
   id: string
   role: 'user' | 'assistant' | 'tool' | 'system'
-  content: string
+  content: MessageContent
   timestamp: number
   toolCalls?: string | null
   toolCallId?: string | null
@@ -22,7 +28,7 @@ type ChatState = {
   abortController: AbortController | null
 
   loadHistory: (sessionId: string) => Promise<void>
-  sendMessage: (text: string, sessionId: string) => Promise<void>
+  sendMessage: (content: MessageContent, sessionId: string) => Promise<void>
   cancelStreaming: () => void
   clear: () => void
 }
@@ -57,11 +63,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
   },
 
-  sendMessage: async (text, sessionId) => {
+  sendMessage: async (content, sessionId) => {
     const userMsg: ChatMessage = {
       id: `user-${Date.now()}`,
       role: 'user',
-      content: text,
+      content,
       timestamp: Date.now(),
     }
 
@@ -82,17 +88,17 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }))
 
     try {
-      for await (const event of streamChat(text, {
+      for await (const event of streamChat(content, {
         sessionId,
         signal: controller.signal,
       })) {
         if (event.type === 'content') {
           set((s) => ({
-            messages: s.messages.map((m) =>
-              m.id === assistantMsg.id
-                ? { ...m, content: m.content + (event.data.text as string) }
-                : m,
-            ),
+            messages: s.messages.map((m) => {
+              if (m.id !== assistantMsg.id) return m
+              const prev = typeof m.content === 'string' ? m.content : ''
+              return { ...m, content: prev + (event.data.text as string) }
+            }),
           }))
         } else if (event.type === 'reasoning') {
           set((s) => ({

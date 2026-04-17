@@ -43,6 +43,9 @@ export default function ChatThread() {
     <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6">
       {messages.map((msg) => {
         if (msg.role === 'user') {
+          const parts = Array.isArray(msg.content)
+            ? msg.content
+            : [{ type: 'text' as const, text: msg.content }];
           return (
             <div key={msg.id} className="flex justify-end ml-12">
               <div className="bg-surface-container-low border-l-2 border-primary p-4 max-w-2xl rounded">
@@ -54,8 +57,27 @@ export default function ChatThread() {
                     {formatTime(msg.timestamp)}
                   </span>
                 </div>
-                <div className="text-on-surface text-sm">
-                  <MarkdownContent content={msg.content} />
+                <div className="text-on-surface text-sm space-y-2">
+                  {parts.map((part: any, i: number) => {
+                    if (part?.type === 'image_url' && part.image_url?.url) {
+                      return (
+                        <img
+                          key={i}
+                          src={part.image_url.url}
+                          alt="attachment"
+                          className="max-w-xs rounded border border-outline-variant/20"
+                        />
+                      );
+                    }
+                    const text =
+                      typeof part === 'string'
+                        ? part
+                        : part?.type === 'text'
+                          ? part.text || ''
+                          : '';
+                    if (!text) return null;
+                    return <MarkdownContent key={i} content={text} />;
+                  })}
                 </div>
               </div>
             </div>
@@ -63,6 +85,8 @@ export default function ChatThread() {
         }
 
         if (msg.role === 'assistant') {
+          const assistantText =
+            typeof msg.content === 'string' ? msg.content : '';
           return (
             <div key={msg.id} className="flex gap-4 mr-12">
               <div className="shrink-0 w-8 h-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center">
@@ -86,8 +110,8 @@ export default function ChatThread() {
                 {msg.toolCalls && (
                   <ToolCallBlock toolCalls={msg.toolCalls} />
                 )}
-                {msg.content && (
-                  <MarkdownContent content={msg.content} />
+                {assistantText && (
+                  <MarkdownContent content={assistantText} />
                 )}
               </div>
             </div>
@@ -95,11 +119,13 @@ export default function ChatThread() {
         }
 
         if (msg.role === 'tool') {
+          const toolText =
+            typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
           return (
             <div key={msg.id} className="ml-12">
               <ToolCallBlock
                 toolCalls={null}
-                toolResult={msg.content}
+                toolResult={toolText}
                 toolName={msg.toolName}
               />
             </div>
