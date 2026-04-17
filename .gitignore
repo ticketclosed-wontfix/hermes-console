@@ -5,3 +5,4 @@ dist
 .desloppify/
 scorecard.png
 test-results/
+.env

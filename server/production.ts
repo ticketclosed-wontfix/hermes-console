@@ -62,7 +62,7 @@ app.use('/api/jobs', gatewayProxy)
 app.use(express.static(DIST_DIR))
 
 // SPA fallback: any non-API GET request returns index.html
-app.get('*', (_req, res) => {
+app.get('/{*splat}', (_req, res) => {
   res.sendFile(path.join(DIST_DIR, 'index.html'))
 })
 

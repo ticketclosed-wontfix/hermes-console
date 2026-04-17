@@ -9,13 +9,21 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TerminalRouteImport } from './routes/terminal'
 import { Route as SkillsRouteImport } from './routes/skills'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as SearchRouteImport } from './routes/search'
 import { Route as MemoryRouteImport } from './routes/memory'
 import { Route as JobsRouteImport } from './routes/jobs'
+import { Route as FilesRouteImport } from './routes/files'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as IndexRouteImport } from './routes/index'
 
+const TerminalRoute = TerminalRouteImport.update({
+  id: '/terminal',
+  path: '/terminal',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SkillsRoute = SkillsRouteImport.update({
   id: '/skills',
   path: '/skills',
@@ -26,6 +34,11 @@ const SettingsRoute = SettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SearchRoute = SearchRouteImport.update({
+  id: '/search',
+  path: '/search',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MemoryRoute = MemoryRouteImport.update({
   id: '/memory',
   path: '/memory',
@@ -34,6 +47,11 @@ const MemoryRoute = MemoryRouteImport.update({
 const JobsRoute = JobsRouteImport.update({
   id: '/jobs',
   path: '/jobs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FilesRoute = FilesRouteImport.update({
+  id: '/files',
+  path: '/files',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -50,54 +68,94 @@ const IndexRoute = IndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
+  '/files': typeof FilesRoute
   '/jobs': typeof JobsRoute
   '/memory': typeof MemoryRoute
+  '/search': typeof SearchRoute
   '/settings': typeof SettingsRoute
   '/skills': typeof SkillsRoute
+  '/terminal': typeof TerminalRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
+  '/files': typeof FilesRoute
   '/jobs': typeof JobsRoute
   '/memory': typeof MemoryRoute
+  '/search': typeof SearchRoute
   '/settings': typeof SettingsRoute
   '/skills': typeof SkillsRoute
+  '/terminal': typeof TerminalRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
+  '/files': typeof FilesRoute
   '/jobs': typeof JobsRoute
   '/memory': typeof MemoryRoute
+  '/search': typeof SearchRoute
   '/settings': typeof SettingsRoute
   '/skills': typeof SkillsRoute
+  '/terminal': typeof TerminalRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/dashboard' | '/jobs' | '/memory' | '/settings' | '/skills'
+  fullPaths:
+    | '/'
+    | '/dashboard'
+    | '/files'
+    | '/jobs'
+    | '/memory'
+    | '/search'
+    | '/settings'
+    | '/skills'
+    | '/terminal'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/dashboard' | '/jobs' | '/memory' | '/settings' | '/skills'
+  to:
+    | '/'
+    | '/dashboard'
+    | '/files'
+    | '/jobs'
+    | '/memory'
+    | '/search'
+    | '/settings'
+    | '/skills'
+    | '/terminal'
   id:
     | '__root__'
     | '/'
     | '/dashboard'
+    | '/files'
     | '/jobs'
     | '/memory'
+    | '/search'
     | '/settings'
     | '/skills'
+    | '/terminal'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DashboardRoute: typeof DashboardRoute
+  FilesRoute: typeof FilesRoute
   JobsRoute: typeof JobsRoute
   MemoryRoute: typeof MemoryRoute
+  SearchRoute: typeof SearchRoute
   SettingsRoute: typeof SettingsRoute
   SkillsRoute: typeof SkillsRoute
+  TerminalRoute: typeof TerminalRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/terminal': {
+      id: '/terminal'
+      path: '/terminal'
+      fullPath: '/terminal'
+      preLoaderRoute: typeof TerminalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/skills': {
       id: '/skills'
       path: '/skills'
@@ -112,6 +170,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/search': {
+      id: '/search'
+      path: '/search'
+      fullPath: '/search'
+      preLoaderRoute: typeof SearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/memory': {
       id: '/memory'
       path: '/memory'
@@ -124,6 +189,13 @@ declare module '@tanstack/react-router' {
       path: '/jobs'
       fullPath: '/jobs'
       preLoaderRoute: typeof JobsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/files': {
+      id: '/files'
+      path: '/files'
+      fullPath: '/files'
+      preLoaderRoute: typeof FilesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -146,10 +218,13 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DashboardRoute: DashboardRoute,
+  FilesRoute: FilesRoute,
   JobsRoute: JobsRoute,
   MemoryRoute: MemoryRoute,
+  SearchRoute: SearchRoute,
   SettingsRoute: SettingsRoute,
   SkillsRoute: SkillsRoute,
+  TerminalRoute: TerminalRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

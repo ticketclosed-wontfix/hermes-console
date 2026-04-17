@@ -7,10 +7,8 @@ Wants=hermes-gateway.service
 Type=simple
 User=nick
 WorkingDirectory=/home/nick/projects/hermes-workspace
-ExecStart=/usr/bin/node --import tsx server/production.ts
-Environment=NODE_ENV=production
-Environment=PORT=3001
-Environment=HERMES_GATEWAY_URL=http://127.0.0.1:8642
+EnvironmentFile=/home/nick/projects/hermes-workspace/.env
+ExecStart=/home/nick/.hermes/node/bin/node --import tsx server/production.ts
 Restart=on-failure
 RestartSec=5
 

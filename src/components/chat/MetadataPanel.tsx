@@ -9,6 +9,9 @@ interface Session {
   tool_call_count: number;
   input_tokens: number;
   output_tokens: number;
+  cache_read_tokens?: number;
+  cache_write_tokens?: number;
+  reasoning_tokens?: number;
   estimated_cost_usd: number | null;
   started_at: number;
   ended_at: number | null;
@@ -27,14 +30,14 @@ const MetadataPanel: React.FC<MetadataPanelProps> = ({ session }) => {
     );
   }
 
-  const tokenValues = [
-    session.input_tokens,
-    session.output_tokens,
-    Math.round(session.input_tokens * 0.5),
-    Math.round(session.output_tokens * 0.5),
-    session.input_tokens + session.output_tokens
+  const tokenBreakdown = [
+    { label: 'Input', value: session.input_tokens },
+    { label: 'Output', value: session.output_tokens },
+    { label: 'Cache Read', value: session.cache_read_tokens || 0 },
+    { label: 'Reasoning', value: session.reasoning_tokens || 0 },
   ];
-  const maxTokenValue = Math.max(...tokenValues, 1);
+  const totalTokens = tokenBreakdown.reduce((s, t) => s + t.value, 0);
+  const maxVal = Math.max(...tokenBreakdown.map(t => t.value), 1);
 
   return (
     <div className="w-[280px] h-screen bg-surface-container-low border-l border-outline-variant/20 flex flex-col shrink-0">
@@ -54,16 +57,23 @@ const MetadataPanel: React.FC<MetadataPanelProps> = ({ session }) => {
       </div>
 
       <div className="px-6 mt-6">
-        <span className="font-label text-[10px] text-on-surface-variant/50 block mb-2">Token Distribution</span>
-        <div className="flex items-end gap-1.5 h-16">
-          {tokenValues.map((val, i) => (
-            <div key={i} className="relative flex-1 bg-primary/20 h-full">
-              <div
-                className="absolute bottom-0 w-full bg-primary/80"
-                style={{ height: `${(val / maxTokenValue) * 100}%` }}
-              />
+        <span className="font-label text-[10px] text-on-surface-variant/50 block mb-3">Token Usage</span>
+        <div className="space-y-2">
+          {tokenBreakdown.filter(t => t.value > 0).map((t) => (
+            <div key={t.label}>
+              <div className="flex justify-between mb-0.5">
+                <span className="font-label text-[9px] text-on-surface-variant/60">{t.label}</span>
+                <span className="font-label text-[9px] text-on-surface">{t.value.toLocaleString()}</span>
+              </div>
+              <div className="h-1 bg-primary/10 rounded-full">
+                <div className="h-full bg-primary/60 rounded-full" style={{ width: `${(t.value / maxVal) * 100}%` }} />
+              </div>
             </div>
           ))}
+        </div>
+        <div className="flex justify-between mt-3 pt-2 border-t border-outline-variant/10">
+          <span className="font-label text-[10px] text-on-surface-variant/50">Total</span>
+          <span className="font-label text-[10px] text-on-surface font-bold">{totalTokens.toLocaleString()}</span>
         </div>
       </div>
 
