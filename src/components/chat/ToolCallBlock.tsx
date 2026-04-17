@@ -47,8 +47,8 @@ export default function ToolCallBlock({ toolCalls, toolResult, toolName }: ToolC
             {toolName || 'tool'}
           </span>
         </div>
-        <div className="bg-surface-container-lowest p-3 font-label text-xs whitespace-pre-wrap overflow-x-auto">
-          {toolResult}
+        <div className="bg-surface-container-lowest p-3 font-label text-xs whitespace-pre-wrap overflow-x-auto overflow-y-auto max-h-96">
+          {formatJson(toolResult)}
         </div>
       </div>
     );
@@ -97,12 +97,12 @@ export default function ToolCallBlock({ toolCalls, toolResult, toolName }: ToolC
 
             {expanded && (
               <div className="mt-2 space-y-2">
-                <div className="bg-surface-container-lowest p-3 font-label text-xs whitespace-pre-wrap overflow-x-auto">
+                <div className="bg-surface-container-lowest p-3 font-label text-xs whitespace-pre-wrap overflow-x-auto overflow-y-auto max-h-96">
                   {formattedArgs}
                 </div>
                 {index === 0 && toolResult && (
-                  <div className="bg-surface-container-lowest p-3 font-label text-xs whitespace-pre-wrap overflow-x-auto">
-                    {toolResult}
+                  <div className="bg-surface-container-lowest p-3 font-label text-xs whitespace-pre-wrap overflow-x-auto overflow-y-auto max-h-96">
+                    {formatJson(toolResult)}
                   </div>
                 )}
               </div>

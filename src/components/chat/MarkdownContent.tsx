@@ -38,8 +38,6 @@ const MarkdownContent: React.FC<MarkdownContentProps> = ({ content }) => {
             </a>
           ),
           code: ({ className, children }) => {
-            const match = /language-(\w+)/.exec(className || '');
-            const language = match ? match[1] : '';
             const isInline = !className;
 
             if (isInline) {
