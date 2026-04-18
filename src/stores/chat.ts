@@ -83,6 +83,89 @@ function dbMessageToChat(m: Message): ChatMessage {
   }
 }
 
+// --------------------------------------------------------------------------
+// Tool-name enrichment
+//
+// The hermes-agent gateway persists role='tool' rows with an empty/NULL
+// `tool_name` column — 100% of rows across every source as of 2026-04-19.
+// That's an upstream gateway bug; Nick's not fixing it there. Per-tool
+// renderers in ToolCallBlock dispatch on toolName, so with empty names
+// every tool result falls through to JsonFallback (raw JSON).
+//
+// Workaround: derive toolName on tool rows from the preceding assistant
+// row's `toolCalls` JSON. Matches by tool_call_id first; falls back to
+// positional match (Nth tool row under an assistant matches Nth entry in
+// its tool_calls array). Render-time only — DB is untouched.
+//
+// The assistant toolCalls JSON shape:
+//   [{"id":"call_abc","name":"terminal","arguments":"{...}"}]
+// (id is often present on DB-persisted rows; absent on live streaming
+// synthetic rows which already carry toolName directly.)
+//
+// Safe to call multiple times: already-populated toolName is preserved.
+// --------------------------------------------------------------------------
+type ParsedToolCall = { id?: string | null; name?: string | null }
+
+function parseToolCalls(raw: string | null | undefined): ParsedToolCall[] {
+  if (!raw) return []
+  try {
+    const parsed = JSON.parse(raw)
+    if (!Array.isArray(parsed)) return []
+    return parsed.filter((e): e is ParsedToolCall => !!e && typeof e === 'object')
+  } catch {
+    return []
+  }
+}
+
+export function enrichToolNames(messages: ChatMessage[]): ChatMessage[] {
+  // First pass: build id -> name map from every assistant row's tool_calls.
+  const nameById = new Map<string, string>()
+  for (const m of messages) {
+    if (m.role !== 'assistant' || !m.toolCalls) continue
+    for (const tc of parseToolCalls(m.toolCalls)) {
+      if (tc?.id && typeof tc.name === 'string' && tc.name) {
+        nameById.set(tc.id, tc.name)
+      }
+    }
+  }
+
+  // Second pass: walk messages in order. Track the most recent assistant
+  // tool_calls list and a counter of how many tool rows have been attributed
+  // to it — for positional fallback when ids aren't available.
+  let currentCalls: ParsedToolCall[] = []
+  let toolCursor = 0
+  let didChange = false
+  const out = messages.map((m) => {
+    if (m.role === 'assistant' && m.toolCalls) {
+      currentCalls = parseToolCalls(m.toolCalls)
+      toolCursor = 0
+      return m
+    }
+    if (m.role !== 'tool') return m
+    if (m.toolName) {
+      // Already populated (live-streamed synthetic rows, or a future day
+      // when the gateway is fixed) — advance the positional cursor anyway
+      // so later siblings still line up.
+      toolCursor += 1
+      return m
+    }
+    let derived: string | null = null
+    if (m.toolCallId && nameById.has(m.toolCallId)) {
+      derived = nameById.get(m.toolCallId) ?? null
+    } else if (currentCalls.length > 0 && toolCursor < currentCalls.length) {
+      const candidate = currentCalls[toolCursor]
+      if (candidate && typeof candidate.name === 'string') {
+        derived = candidate.name
+      }
+    }
+    toolCursor += 1
+    if (!derived) return m
+    didChange = true
+    return { ...m, toolName: derived }
+  })
+  return didChange ? out : messages
+}
+
 export const useChatStore = create<ChatState>((set, get) => {
   // ---------------------------------------------------------------------
   // Bucket routing: a stream for a given turn writes into the active view
@@ -219,7 +302,7 @@ export const useChatStore = create<ChatState>((set, get) => {
           set({ loading: false })
           return
         }
-        set({ messages: data.items.map(dbMessageToChat), loading: false })
+        set({ messages: enrichToolNames(data.items.map(dbMessageToChat)), loading: false })
       } catch (err) {
         set({ error: String(err), loading: false })
       }
@@ -400,7 +483,7 @@ export const useChatStore = create<ChatState>((set, get) => {
           // (If persistence lags, keep our local messages.)
           if (data.items.length > 0) {
             writeToSession(turnSessionId, () => ({
-              messages: data.items.map(dbMessageToChat),
+              messages: enrichToolNames(data.items.map(dbMessageToChat)),
             }))
           }
         } catch {
