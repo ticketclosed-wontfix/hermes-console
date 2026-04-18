@@ -97,10 +97,18 @@ function dbMessageToChat(m: Message): ChatMessage {
 // positional match (Nth tool row under an assistant matches Nth entry in
 // its tool_calls array). Render-time only — DB is untouched.
 //
-// The assistant toolCalls JSON shape:
-//   [{"id":"call_abc","name":"terminal","arguments":"{...}"}]
-// (id is often present on DB-persisted rows; absent on live streaming
-// synthetic rows which already carry toolName directly.)
+// TWO assistant toolCalls shapes exist in the wild:
+//
+//  A. Flat shape (produced by the live stream tool_started handler and by
+//     some legacy gateway paths):
+//       [{"id":"call_abc","name":"terminal","arguments":"{...}"}]
+//
+//  B. OpenAI-function shape (what the hermes gateway actually persists
+//     to state.db as of 2026-04-19):
+//       [{"id":"toolu_...", "type":"function",
+//         "function":{"name":"terminal","arguments":"{...}"}}]
+//
+// parseToolCalls() flattens both into ParsedToolCall.
 //
 // Safe to call multiple times: already-populated toolName is preserved.
 // --------------------------------------------------------------------------
@@ -111,7 +119,27 @@ function parseToolCalls(raw: string | null | undefined): ParsedToolCall[] {
   try {
     const parsed = JSON.parse(raw)
     if (!Array.isArray(parsed)) return []
-    return parsed.filter((e): e is ParsedToolCall => !!e && typeof e === 'object')
+    const out: ParsedToolCall[] = []
+    for (const entry of parsed) {
+      if (!entry || typeof entry !== 'object') continue
+      const e = entry as Record<string, unknown>
+      const id =
+        (typeof e.id === 'string' && e.id) ||
+        (typeof e.call_id === 'string' && (e.call_id as string)) ||
+        null
+      // Flat shape: {name}. OpenAI-function shape: {function:{name}}.
+      let name: string | null = null
+      if (typeof e.name === 'string' && e.name) name = e.name
+      else if (
+        e.function &&
+        typeof e.function === 'object' &&
+        typeof (e.function as Record<string, unknown>).name === 'string'
+      ) {
+        name = (e.function as Record<string, string>).name
+      }
+      out.push({ id, name })
+    }
+    return out
   } catch {
     return []
   }
