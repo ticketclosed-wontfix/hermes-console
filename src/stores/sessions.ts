@@ -1,7 +1,6 @@
 import { create } from 'zustand'
 import type { Session } from '@/lib/api'
 import { fetchSessions, searchSessions, createSession } from '@/lib/api'
-import { useChatStore } from '@/stores/chat'
 
 type SessionsState = {
   sessions: Session[]
@@ -65,9 +64,15 @@ export const useSessionsStore = create<SessionsState>((set, get) => ({
   // Lazy new-session: no DB row, no network call. The chat pane will show the
   // empty state and the first sendMessage() will create the row via
   // ensureActiveSession().
+  //
+  // NOTE: we deliberately do NOT clear the chat store's messages here. If a
+  // background stream is still running in the previous session, the chat
+  // store's setActiveSession(null) (fired by the route effect on
+  // activeSessionId change) will snapshot the outgoing session into a
+  // per-session bucket so the stream can keep landing there. Calling clear()
+  // here would destroy that bucket's contents.
   startNew: () => {
     set({ activeSessionId: null, error: null })
-    useChatStore.getState().clear()
   },
 
   ensureActiveSession: async (opts = {}) => {

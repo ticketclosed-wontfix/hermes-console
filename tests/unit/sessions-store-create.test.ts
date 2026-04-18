@@ -22,6 +22,7 @@ describe('sessions store — startNew() is lazy', () => {
       searchQuery: '',
     })
     useChatStore.setState({
+      activeSessionId: 'old-session-id',
       messages: [
         { id: 'old-1', role: 'user', content: 'hi', timestamp: 1 },
       ] as any,
@@ -29,6 +30,7 @@ describe('sessions store — startNew() is lazy', () => {
       streaming: false,
       error: null,
       abortController: null,
+      sessionBuckets: new Map(),
     })
     vi.clearAllMocks()
   })
@@ -40,9 +42,15 @@ describe('sessions store — startNew() is lazy', () => {
     expect(searchSessions).not.toHaveBeenCalled()
   })
 
-  it('startNew() clears activeSessionId and chat messages', () => {
+  it('startNew() clears activeSessionId and the route effect swaps chat view to empty', () => {
     useSessionsStore.getState().startNew()
     expect(useSessionsStore.getState().activeSessionId).toBeNull()
+    // startNew() no longer directly clears the chat store — the route
+    // effect does, by calling setActiveSession(null) after activeSessionId
+    // flips. This preserves background streams in the prev session (their
+    // state is snapshotted into a per-session bucket instead of wiped).
+    // Simulate the route effect here:
+    useChatStore.getState().setActiveSession(null)
     expect(useChatStore.getState().messages).toHaveLength(0)
   })
 

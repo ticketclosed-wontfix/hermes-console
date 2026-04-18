@@ -14,16 +14,24 @@ function ChatPage() {
   const activeSessionId = useSessionsStore((s) => s.activeSessionId)
   const sessions = useSessionsStore((s) => s.sessions)
   const loadHistory = useChatStore((s) => s.loadHistory)
-  const clearChat = useChatStore((s) => s.clear)
+  const setActiveSession = useChatStore((s) => s.setActiveSession)
   const activeSession = sessions.find((s) => s.id === activeSessionId) || null
 
   useEffect(() => {
+    // Tell the chat store the view changed FIRST — this snapshots the
+    // outgoing session's state into a per-session bucket (preserving any
+    // live background stream) and hydrates the incoming session's state
+    // back to the top-level fields the UI reads. Crucially this means
+    // switching to a still-streaming session shows the live stream
+    // resuming token-by-token without cancelling anything server-side.
+    setActiveSession(activeSessionId)
+    // Then trigger a DB history load for the newly active session if we
+    // don't already hold local/live messages (loadHistory's guards handle
+    // the race with an ongoing stream).
     if (activeSessionId) {
       loadHistory(activeSessionId)
-    } else {
-      clearChat()
     }
-  }, [activeSessionId, loadHistory, clearChat])
+  }, [activeSessionId, loadHistory, setActiveSession])
 
   return (
     <div className="flex flex-1 h-full min-w-0">

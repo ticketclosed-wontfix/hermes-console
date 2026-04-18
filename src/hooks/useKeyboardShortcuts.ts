@@ -20,8 +20,11 @@ export function useKeyboardShortcuts() {
       // Ctrl/Cmd+N — New chat session
       if (mod && e.key === 'n') {
         e.preventDefault()
+        // Flip activeSessionId → null only. The route's setActiveSession
+        // effect handles the chat view swap (and preserves any background
+        // stream in the previous session by snapshotting its bucket).
+        // Calling chat.clear() here would destroy that bucket.
         useSessionsStore.getState().setActive(null)
-        useChatStore.getState().clear()
         navigate({ to: '/' })
         return
       }
