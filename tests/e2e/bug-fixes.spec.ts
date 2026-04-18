@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 
 // These tests run against the real production build served by the systemd
-// hermes-workspace unit (http://127.0.0.1:3001) and the real Hermes gateway.
+// hermes-console unit (http://127.0.0.1:3001) and the real Hermes gateway.
 // They cover the two regressions fixed in this branch:
 //   1. Gateway auth forwarding — sending a message must yield a streamed reply.
 //   2. Lazy session creation — clicking NEW_SESSION must NOT create DB rows.

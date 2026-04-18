@@ -1,13 +1,13 @@
 [Unit]
-Description=Hermes Workspace
+Description=Hermes Console
 After=network.target hermes-gateway.service
 Wants=hermes-gateway.service
 
 [Service]
 Type=simple
 User=nick
-WorkingDirectory=/home/nick/projects/hermes-workspace
-EnvironmentFile=/home/nick/projects/hermes-workspace/.env
+WorkingDirectory=/home/nick/projects/hermes-console
+EnvironmentFile=/home/nick/projects/hermes-console/.env
 ExecStart=/home/nick/.hermes/node/bin/node --import tsx server/production.ts
 Restart=on-failure
 RestartSec=5

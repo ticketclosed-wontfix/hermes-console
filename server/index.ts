@@ -55,6 +55,6 @@ const server = createServer(app)
 attachTerminalWs(server)
 
 server.listen(PORT, '127.0.0.1', () => {
-  console.log(`[hermes-workspace] middleware listening on http://127.0.0.1:${PORT}`)
-  console.log(`[hermes-workspace] proxying to gateway at ${GATEWAY_URL}`)
+  console.log(`[hermes-console] middleware listening on http://127.0.0.1:${PORT}`)
+  console.log(`[hermes-console] proxying to gateway at ${GATEWAY_URL}`)
 })

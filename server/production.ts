@@ -107,9 +107,9 @@ if (isEntryPoint) {
 
   server.listen(PORT, HOST, () => {
     console.log(
-      `[hermes-workspace] production server listening on http://${HOST}:${PORT}`,
+      `[hermes-console] production server listening on http://${HOST}:${PORT}`,
     )
-    console.log(`[hermes-workspace] serving static files from ${DIST_DIR}`)
-    console.log(`[hermes-workspace] proxying to gateway at ${GATEWAY_URL}`)
+    console.log(`[hermes-console] serving static files from ${DIST_DIR}`)
+    console.log(`[hermes-console] proxying to gateway at ${GATEWAY_URL}`)
   })
 }
