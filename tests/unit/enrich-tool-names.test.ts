@@ -162,4 +162,54 @@ describe('enrichToolNames', () => {
     expect(out[3].toolName).toBe('web_search')
     expect(out[4].toolName).toBe('read_file')
   })
+
+  it('parses the OpenAI-function shape stored by the hermes gateway', () => {
+    // Actual DB shape as of 2026-04-19:
+    //   [{"id":"toolu_X","type":"function","function":{"name":"terminal","arguments":"..."}}]
+    const msgs: ChatMessage[] = [
+      {
+        id: 'a1',
+        role: 'assistant',
+        content: '',
+        timestamp: 0,
+        toolCalls: JSON.stringify([
+          {
+            id: 'toolu_X',
+            type: 'function',
+            function: { name: 'terminal', arguments: '{}' },
+          },
+          {
+            id: 'toolu_Y',
+            type: 'function',
+            function: { name: 'read_file', arguments: '{}' },
+          },
+        ]),
+      },
+      mkTool('t1', 'toolu_Y'),
+      mkTool('t2', 'toolu_X'),
+    ]
+    const out = enrichToolNames(msgs)
+    expect(out[1].toolName).toBe('read_file')
+    expect(out[2].toolName).toBe('terminal')
+  })
+
+  it('positional fallback also works with OpenAI-function shape', () => {
+    const msgs: ChatMessage[] = [
+      {
+        id: 'a1',
+        role: 'assistant',
+        content: '',
+        timestamp: 0,
+        toolCalls: JSON.stringify([
+          { type: 'function', function: { name: 'web_search', arguments: '{}' } },
+          { type: 'function', function: { name: 'patch', arguments: '{}' } },
+        ]),
+      },
+      mkTool('t1', null),
+      mkTool('t2', null),
+    ]
+    const out = enrichToolNames(msgs)
+    expect(out[1].toolName).toBe('web_search')
+    expect(out[2].toolName).toBe('patch')
+  })
 })
