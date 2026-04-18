@@ -150,6 +150,76 @@ export const useChatStore = create<ChatState>((set, get) => ({
                 : m,
             ),
           }))
+        } else if (event.type === 'tool_started') {
+          // Live tool call card. Mirror the DB render shape:
+          //   assistant row with toolCalls JSON populated (no content)
+          //   (tool result row is inserted by tool_completed, or backfilled
+          //    from DB after streaming completes — see finally block)
+          const toolName = (event.data.tool_name as string | null) || 'tool'
+          const preview = (event.data.preview as string | null) || ''
+          const args = event.data.args as Record<string, unknown> | null
+          const callId =
+            (event.data.call_id as string | null) ||
+            `${toolName}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+          // ToolCallBlock parses toolCalls as JSON array of {name, arguments}
+          // where arguments is itself a JSON string.
+          const argsJson = JSON.stringify(args ?? (preview ? { preview } : {}))
+          const toolCallsJson = JSON.stringify([
+            { name: toolName, arguments: argsJson },
+          ])
+          const toolCallMsgId = `local-toolcall-${callId}`
+          set((s) => {
+            // Insert the assistant-tool-call row BEFORE the currently streaming
+            // assistant placeholder so the thread renders in natural order:
+            //   user → [toolcall row]+ → assistant final
+            const idx = s.messages.findIndex((m) => m.id === assistantMsg.id)
+            if (idx < 0) return s
+            // Dedupe — if we already inserted this call id, skip.
+            if (s.messages.some((m) => m.id === toolCallMsgId)) return s
+            const row: ChatMessage = {
+              id: toolCallMsgId,
+              role: 'assistant',
+              content: '',
+              timestamp: Date.now(),
+              toolCalls: toolCallsJson,
+              toolCallId: callId,
+              toolName,
+            }
+            const next = [...s.messages]
+            next.splice(idx, 0, row)
+            return { messages: next }
+          })
+        } else if (event.type === 'tool_completed') {
+          // The /v1/chat/completions endpoint does NOT currently stream
+          // tool.completed, but /v1/runs does. Handle it if it arrives.
+          // Real tool output (role='tool' with full content) is backfilled
+          // from state.db in the finally block — this just flips status.
+          const toolName = (event.data.tool_name as string | null) || 'tool'
+          const callId = (event.data.call_id as string | null) || null
+          const resultRaw = event.data.result
+          const resultText =
+            typeof resultRaw === 'string'
+              ? resultRaw
+              : resultRaw != null
+                ? JSON.stringify(resultRaw)
+                : `(completed${event.data.duration ? ` in ${event.data.duration}s` : ''})`
+          const toolResultMsgId = `local-toolresult-${callId || `${toolName}-${Date.now()}`}`
+          set((s) => {
+            if (s.messages.some((m) => m.id === toolResultMsgId)) return s
+            const idx = s.messages.findIndex((m) => m.id === assistantMsg.id)
+            const row: ChatMessage = {
+              id: toolResultMsgId,
+              role: 'tool',
+              content: resultText,
+              timestamp: Date.now(),
+              toolCallId: callId,
+              toolName,
+            }
+            const next = [...s.messages]
+            if (idx < 0) next.push(row)
+            else next.splice(idx, 0, row)
+            return { messages: next }
+          })
         }
       }
 
@@ -161,6 +231,22 @@ export const useChatStore = create<ChatState>((set, get) => ({
         streaming: false,
         abortController: null,
       }))
+
+      // Backfill from DB: the /v1/chat/completions endpoint does not stream
+      // tool result content (only tool.started progress markers), and the
+      // placeholder tool rows we inserted live have synthetic arguments.
+      // Replace local turn with authoritative DB state now that streaming
+      // is done. Guards in loadHistory() prevented this during streaming.
+      try {
+        const data = await fetchMessages(effectiveSessionId)
+        // Sanity check: only replace if DB actually has this turn persisted.
+        // (If persistence lags, keep our local messages.)
+        if (data.items.length > 0) {
+          set({ messages: data.items.map(dbMessageToChat) })
+        }
+      } catch {
+        // DB backfill is a best-effort enhancement; keep local state on error.
+      }
     } catch (err) {
       if ((err as Error).name !== 'AbortError') {
         set({ error: String(err), streaming: false, abortController: null })

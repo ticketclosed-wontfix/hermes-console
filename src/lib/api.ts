@@ -335,34 +335,98 @@ export async function* streamChat(
       const rawEvent = buffer.slice(0, boundary)
       buffer = buffer.slice(boundary + 2)
 
+      // SSE spec: each block may contain `event:` and `data:` lines.
+      // OpenAI chunks arrive as bare `data:` lines (implicit event name "message").
+      // The hermes gateway emits tool progress as a custom
+      // `event: hermes.tool.progress` block with a JSON data payload.
+      let eventName = 'message'
+      let dataPayload = ''
       for (const line of rawEvent.split('\n')) {
-        const trimmed = line.trim()
-        if (!trimmed.startsWith('data:')) continue
-
-        const payload = trimmed.slice(5).trim()
-        if (!payload || payload === '[DONE]') continue
-
-        try {
-          const parsed = JSON.parse(payload)
-          const delta = parsed.choices?.[0]?.delta
-          if (delta?.content) {
-            yield { type: 'content', data: { text: delta.content } }
-          }
-          if (delta?.reasoning || delta?.reasoning_content) {
-            yield {
-              type: 'reasoning',
-              data: { text: delta.reasoning || delta.reasoning_content },
-            }
-          }
-          if (delta?.tool_calls) {
-            yield { type: 'tool_calls', data: { tool_calls: delta.tool_calls } }
-          }
-        } catch {
-          // skip malformed JSON
+        // Do not trim the whole line — `data:` values may start with a space
+        // per spec, but we still need leading whitespace-tolerance on the key.
+        if (line.startsWith('event:')) {
+          eventName = line.slice(6).trim()
+        } else if (line.startsWith('data:')) {
+          // Concatenate multi-line data fields with '\n' per SSE spec.
+          const piece = line.slice(5).replace(/^ /, '')
+          dataPayload = dataPayload ? dataPayload + '\n' + piece : piece
         }
       }
 
+      const payload = dataPayload.trim()
       boundary = buffer.indexOf('\n\n')
+      if (!payload || payload === '[DONE]') continue
+
+      if (eventName === 'hermes.tool.progress') {
+        // Gateway emits two payload shapes depending on the endpoint:
+        //   (a) /v1/chat/completions: {tool, emoji, label}  — tool.started only
+        //   (b) /v1/runs:             {event: "tool.started"|"tool.completed", tool, preview, ...}
+        // Normalize both into tool_started / tool_completed store events.
+        try {
+          const parsed = JSON.parse(payload) as Record<string, unknown>
+          const evt =
+            typeof parsed.event === 'string' ? (parsed.event as string) : 'tool.started'
+          const toolName =
+            (parsed.tool as string | undefined) ||
+            (parsed.tool_name as string | undefined) ||
+            null
+          const preview =
+            (parsed.preview as string | undefined) ||
+            (parsed.label as string | undefined) ||
+            null
+          const args = (parsed.args as Record<string, unknown> | undefined) || null
+          const callId =
+            (parsed.call_id as string | undefined) ||
+            (parsed.id as string | undefined) ||
+            null
+
+          if (evt === 'tool.started') {
+            yield {
+              type: 'tool_started',
+              data: {
+                tool_name: toolName,
+                preview,
+                args,
+                call_id: callId,
+              },
+            }
+          } else if (evt === 'tool.completed') {
+            yield {
+              type: 'tool_completed',
+              data: {
+                tool_name: toolName,
+                call_id: callId,
+                duration: parsed.duration ?? null,
+                error: parsed.error ?? false,
+                result: parsed.result ?? null,
+              },
+            }
+          }
+        } catch {
+          // malformed tool progress payload — ignore
+        }
+        continue
+      }
+
+      // Default OpenAI chat.completion.chunk path.
+      try {
+        const parsed = JSON.parse(payload)
+        const delta = parsed.choices?.[0]?.delta
+        if (delta?.content) {
+          yield { type: 'content', data: { text: delta.content } }
+        }
+        if (delta?.reasoning || delta?.reasoning_content) {
+          yield {
+            type: 'reasoning',
+            data: { text: delta.reasoning || delta.reasoning_content },
+          }
+        }
+        if (delta?.tool_calls) {
+          yield { type: 'tool_calls', data: { tool_calls: delta.tool_calls } }
+        }
+      } catch {
+        // skip malformed JSON
+      }
     }
   }
 }
