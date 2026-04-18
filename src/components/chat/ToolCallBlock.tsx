@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Terminal, Globe, FileText, Code, Wrench, ChevronDown } from 'lucide-react';
+import { renderToolResult } from './tool-renderers';
 
 interface ToolCallBlockProps {
   toolCalls: string | null;
@@ -47,9 +48,7 @@ export default function ToolCallBlock({ toolCalls, toolResult, toolName }: ToolC
             {toolName || 'tool'}
           </span>
         </div>
-        <div className="bg-surface-container-lowest p-3 font-label text-xs whitespace-pre-wrap overflow-x-auto overflow-y-auto max-h-96">
-          {formatJson(toolResult)}
-        </div>
+        {renderToolResult(toolName, toolResult)}
       </div>
     );
   }
@@ -101,9 +100,7 @@ export default function ToolCallBlock({ toolCalls, toolResult, toolName }: ToolC
                   {formattedArgs}
                 </div>
                 {index === 0 && toolResult && (
-                  <div className="bg-surface-container-lowest p-3 font-label text-xs whitespace-pre-wrap overflow-x-auto overflow-y-auto max-h-96">
-                    {formatJson(toolResult)}
-                  </div>
+                  <div>{renderToolResult(call.name, toolResult, call.arguments)}</div>
                 )}
               </div>
             )}
