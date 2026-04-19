@@ -35,12 +35,19 @@ function getWriteDb() {
 export function kindFilterSql(kind: string | undefined): { sql: string; params: unknown[] } {
   switch (kind) {
     case 'chats':
+      // Exclude sessions with a parent_session_id — those are subagent/child
+      // sessions spawned via delegate_task().  Before the source='delegate'
+      // tagging was added (2026-04-19), child sessions inherited source='cli'
+      // from the parent, making them indistinguishable without this guard.
+      // With the fix in place, new child sessions use source='delegate', but
+      // the parent_session_id guard also covers all historical child rows.
       return {
         sql:
           "s.source IN ('cli','telegram','workspace','api_server',"
           + "'discord','slack','signal','whatsapp','matrix','mattermost',"
           + "'homeassistant','email','sms','dingtalk','feishu','wecom',"
-          + "'wecom_callback','weixin','bluebubbles','qqbot','tui','local')",
+          + "'wecom_callback','weixin','bluebubbles','qqbot','tui','local')"
+          + " AND s.parent_session_id IS NULL",
         params: [],
       }
     case 'github':
@@ -60,7 +67,13 @@ export function kindFilterSql(kind: string | undefined): { sql: string; params: 
     case 'cron':
       return { sql: "s.source = 'cron'", params: [] }
     case 'agents':
-      return { sql: "s.source = 'delegate'", params: [] }
+      // Include both the new source='delegate' sessions AND historical
+      // child sessions that used source='cli' with a parent_session_id
+      // (created before the source='delegate' tag was introduced).
+      return {
+        sql: "(s.source = 'delegate' OR (s.parent_session_id IS NOT NULL AND s.source IN ('cli','api_server','telegram','webhook','cron')))",
+        params: [],
+      }
     default:
       return { sql: '1=1', params: [] }
   }
@@ -79,7 +92,13 @@ router.get('/', (req, res) => {
     let sessions
     if (search) {
       sessions = db.prepare(`
-        SELECT s.* FROM sessions s
+        SELECT s.*,
+          (SELECT substr(m2.content, 1, 120)
+           FROM messages m2
+           WHERE m2.session_id = s.id AND m2.role = 'user'
+           ORDER BY m2.timestamp ASC LIMIT 1
+          ) as first_user_message
+        FROM sessions s
         JOIN messages m ON m.session_id = s.id
         JOIN messages_fts fts ON fts.rowid = m.id
         WHERE messages_fts MATCH ? AND (${kindSql})
@@ -89,7 +108,13 @@ router.get('/', (req, res) => {
       `).all(search, ...kindParams, limit, offset)
     } else {
       sessions = db.prepare(
-        `SELECT s.* FROM sessions s WHERE ${kindSql} ORDER BY s.started_at DESC LIMIT ? OFFSET ?`
+        `SELECT s.*,
+          (SELECT substr(m.content, 1, 120)
+           FROM messages m
+           WHERE m.session_id = s.id AND m.role = 'user'
+           ORDER BY m.timestamp ASC LIMIT 1
+          ) as first_user_message
+         FROM sessions s WHERE ${kindSql} ORDER BY s.started_at DESC LIMIT ? OFFSET ?`
       ).all(...kindParams, limit, offset)
     }
 

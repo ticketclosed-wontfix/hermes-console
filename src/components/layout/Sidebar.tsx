@@ -221,7 +221,7 @@ export default function Sidebar() {
                     }`}
                   >
                     <div className="truncate text-xs font-medium leading-tight pr-16">
-                      {session.title || `${session.source || 'chat'} session`}
+                      {session.title || session.first_user_message || `Chat ${session.id.slice(-6)}`}
                     </div>
                     <div className="flex items-center gap-1.5 mt-1">
                       <span className="text-[9px] bg-primary/10 px-1 border border-primary/20 rounded-sm font-label">

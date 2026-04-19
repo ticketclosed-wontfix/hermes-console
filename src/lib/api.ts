@@ -31,6 +31,8 @@ export type Session = {
   input_tokens: number
   output_tokens: number
   estimated_cost_usd: number | null
+  // First user message snippet (120 chars), returned by list endpoints for display fallback.
+  first_user_message: string | null
 }
 
 export type Message = {

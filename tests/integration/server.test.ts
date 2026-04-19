@@ -162,11 +162,11 @@ describe('server integration — /api/sessions', () => {
 describe('server integration — /api/sessions?kind filter', () => {
   // Seed a representative row per source, then assert each tab filter
   // returns only the expected subset.
-  function seedSession(id: string, source: string, startedAt: number, firstUserMsg?: string) {
+  function seedSession(id: string, source: string, startedAt: number, firstUserMsg?: string, parentSessionId?: string) {
     const db = new Database(DB_PATH)
     db.prepare(
-      `INSERT INTO sessions (id, source, started_at, message_count) VALUES (?, ?, ?, 0)`
-    ).run(id, source, startedAt)
+      `INSERT INTO sessions (id, source, parent_session_id, started_at, message_count) VALUES (?, ?, ?, ?, 0)`
+    ).run(id, source, parentSessionId ?? null, startedAt)
     if (firstUserMsg) {
       db.prepare(
         `INSERT INTO messages (session_id, role, content, timestamp) VALUES (?, 'user', ?, ?)`
@@ -191,30 +191,47 @@ describe('server integration — /api/sessions?kind filter', () => {
     expect(res.body.total).toBe(3)
   })
 
-  it('kind=cron returns only cron sessions', async () => {
-    seedSession('cli-1', 'cli', 1000)
-    seedSession('cron-1', 'cron', 1001)
-    seedSession('cron-2', 'cron', 1002)
+  it('kind=chats excludes cli sessions with a parent_session_id (legacy subagents)', async () => {
+    // Parent: real user session
+    seedSession('cli-parent', 'cli', 2000)
+    // Child spawned before source=delegate fix — has source=cli but parent set
+    seedSession('cli-child', 'cli', 2001, 'do some task', 'cli-parent')
 
     const app = createApp({ apiKey: '', skipStatic: true })
-    const res = await request(app).get('/api/sessions?kind=cron').expect(200)
+    const res = await request(app).get('/api/sessions?kind=chats').expect(200)
 
-    const ids = res.body.items.map((s: { id: string }) => s.id).sort()
-    expect(ids).toEqual(['cron-1', 'cron-2'])
-    expect(res.body.total).toBe(2)
+    const ids = res.body.items.map((s: { id: string }) => s.id)
+    expect(ids).toContain('cli-parent')
+    expect(ids).not.toContain('cli-child')
   })
 
-  it('kind=agents returns only delegate sessions', async () => {
-    seedSession('cli-1', 'cli', 1000)
-    seedSession('del-1', 'delegate', 1001)
-    seedSession('del-2', 'delegate', 1002)
+  it('kind=agents includes delegate sessions AND legacy cli-with-parent sessions', async () => {
+    seedSession('cli-standalone', 'cli', 3000)
+    seedSession('cli-parent2', 'cli', 3001)
+    seedSession('cli-child2', 'cli', 3002, 'subtask', 'cli-parent2')
+    seedSession('del-3', 'delegate', 3003)
 
     const app = createApp({ apiKey: '', skipStatic: true })
     const res = await request(app).get('/api/sessions?kind=agents').expect(200)
 
-    const ids = res.body.items.map((s: { id: string }) => s.id).sort()
-    expect(ids).toEqual(['del-1', 'del-2'])
-    expect(res.body.total).toBe(2)
+    const ids = res.body.items.map((s: { id: string }) => s.id)
+    expect(ids).toContain('del-3')
+    expect(ids).toContain('cli-child2')
+    expect(ids).not.toContain('cli-standalone')
+    expect(ids).not.toContain('cli-parent2')
+  })
+
+  it('sessions list includes first_user_message field', async () => {
+    seedSession('preview-1', 'cli', 4000, 'Hello from the user')
+    seedSession('preview-2', 'cli', 4001)  // no messages
+
+    const app = createApp({ apiKey: '', skipStatic: true })
+    const res = await request(app).get('/api/sessions?kind=chats').expect(200)
+
+    const p1 = res.body.items.find((s: { id: string }) => s.id === 'preview-1')
+    const p2 = res.body.items.find((s: { id: string }) => s.id === 'preview-2')
+    expect(p1?.first_user_message).toBe('Hello from the user')
+    expect(p2?.first_user_message).toBeNull()
   })
 
   it('kind=github returns only webhook sessions whose first msg mentions GitHub', async () => {
