@@ -1,11 +1,12 @@
 import { useEffect, useMemo } from 'react';
-import { Search, Plus, Settings, MessageSquare, LayoutDashboard, Clock, Puzzle, Brain, FolderOpen, Terminal, Download, FileJson, GitFork, GitBranch, Bot } from 'lucide-react';
+import { Search, Plus, Settings, MessageSquare, LayoutDashboard, Clock, Puzzle, Brain, FolderOpen, Terminal, Download, FileJson, GitFork, GitBranch, Bot, Bell } from 'lucide-react';
 import { useSessionsStore } from '@/stores/sessions';
 import type { SessionKind } from '@/lib/api';
 import { Link, useLocation, useNavigate } from '@tanstack/react-router';
 import { exportSession, downloadBlob, forkSession } from '@/lib/api';
+import NotificationBell from '@/components/notifications/NotificationBell';
 
-type NavItem = { path: '/' | '/dashboard' | '/jobs' | '/skills' | '/memory' | '/files' | '/search' | '/terminal' | '/settings'; label: string; icon: typeof MessageSquare };
+type NavItem = { path: '/' | '/dashboard' | '/jobs' | '/skills' | '/memory' | '/files' | '/search' | '/terminal' | '/settings' | '/notifications' | '/repos'; label: string; icon: typeof MessageSquare };
 const NAV_ITEMS: NavItem[] = [
   { path: '/', label: 'CHAT', icon: MessageSquare },
   { path: '/dashboard', label: 'DASH', icon: LayoutDashboard },
@@ -13,8 +14,10 @@ const NAV_ITEMS: NavItem[] = [
   { path: '/skills', label: 'SKILLS', icon: Puzzle },
   { path: '/memory', label: 'MEM', icon: Brain },
   { path: '/files', label: 'FILES', icon: FolderOpen },
+  { path: '/repos', label: 'REPOS', icon: GitBranch },
   { path: '/search', label: 'FIND', icon: Search },
   { path: '/terminal', label: 'TERM', icon: Terminal },
+  { path: '/notifications', label: 'NOTIF', icon: Bell },
   { path: '/settings', label: 'CFG', icon: Settings },
 ];
 
@@ -101,7 +104,7 @@ export default function Sidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="px-3 py-2 grid grid-cols-5 gap-1">
+      <nav className="px-3 py-2 grid grid-cols-6 gap-1">
         {NAV_ITEMS.map(({ path, label, icon: Icon }) => {
           const active = path === '/' ? isChat : location.pathname === path;
           return (
@@ -292,9 +295,10 @@ export default function Sidebar() {
             ADMIN
           </div>
         </div>
-        <button className="text-on-surface-variant/50 hover:text-on-surface transition-colors">
+        <NotificationBell />
+        <Link to="/settings" className="text-on-surface-variant/50 hover:text-on-surface transition-colors">
           <Settings size={16} />
-        </button>
+        </Link>
       </div>
     </aside>
   );

@@ -11,7 +11,16 @@ import { healthRouter } from './routes/health.js'
 import { configRouter } from './routes/config.js'
 import { filesRouter } from './routes/files.js'
 import { searchRouter } from './routes/search.js'
+import { notificationsRouter } from './routes/notifications.js'
+import { githubRouter } from './routes/github.js'
+import { runMigrations, ensureIngestSecret } from './db.js'
 import { attachTerminalWs } from './terminal.js'
+
+// Run DB migrations at import time (before routes serve)
+runMigrations()
+
+// Ensure ingest secret is available (generates ephemeral if missing)
+const INGEST_SECRET = ensureIngestSecret()
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -55,6 +64,8 @@ export function createApp(opts: AppOptions = {}): Express {
   app.use('/api/config', configRouter)
   app.use('/api/files', filesRouter)
   app.use('/api/search', searchRouter)
+  app.use('/api/notifications', notificationsRouter)
+  app.use('/api/github', githubRouter)
 
   // Proxy to gateway — chat, models, jobs, runs.
   // NOTE: When mounted via app.use('/v1', ...), Express strips '/v1' from
