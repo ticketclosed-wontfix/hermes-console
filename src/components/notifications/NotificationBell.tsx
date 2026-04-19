@@ -72,7 +72,11 @@ function NotificationRow({ n, onMarkRead, onOpen }: {
   )
 }
 
-export default function NotificationBell() {
+interface NotificationBellProps {
+  dropUp?: boolean
+}
+
+export default function NotificationBell({ dropUp = false }: NotificationBellProps) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   const { items, unreadCount, markRead, markAllRead, refresh } = useNotificationsStore()
@@ -129,7 +133,7 @@ export default function NotificationBell() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-1 w-[320px] max-h-[400px] bg-surface-container-low border border-outline-variant/20 rounded-md shadow-xl z-50 flex flex-col overflow-hidden">
+        <div className={`absolute right-0 ${dropUp ? 'bottom-full mb-1' : 'top-full mt-1'} w-[320px] max-h-[400px] bg-surface-container-low border border-outline-variant/20 rounded-md shadow-xl z-50 flex flex-col overflow-hidden`}>
           <div className="flex items-center justify-between px-3 py-2 border-b border-outline-variant/15">
             <span className="text-[10px] font-label tracking-widest uppercase text-on-surface-variant/60">
               Notifications
