@@ -274,6 +274,25 @@ router.get('/:id/export', (req, res) => {
   }
 })
 
+// DELETE /api/sessions/:id — delete a session and all its messages
+router.delete('/:id', (req, res) => {
+  try {
+    const db = getWriteDb()
+    const session = db.prepare('SELECT id FROM sessions WHERE id = ?').get(req.params.id)
+    if (!session) {
+      db.close()
+      res.status(404).json({ error: 'Session not found' })
+      return
+    }
+    db.prepare('DELETE FROM messages WHERE session_id = ?').run(req.params.id)
+    db.prepare('DELETE FROM sessions WHERE id = ?').run(req.params.id)
+    db.close()
+    res.json({ ok: true })
+  } catch (err) {
+    res.status(500).json({ error: String(err) })
+  }
+})
+
 // POST /api/sessions/:id/fork — fork session messages
 router.post('/:id/fork', (req, res) => {
   try {

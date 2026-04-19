@@ -157,6 +157,39 @@ describe('server integration — /api/sessions', () => {
     expect(res.body.total).toBe(2)
     expect(res.body.items).toHaveLength(2)
   })
+  it('DELETE /api/sessions/:id removes the session and its messages', async () => {
+    const app = createApp({ apiKey: '', skipStatic: true })
+
+    // Create a session
+    const createRes = await request(app)
+      .post('/api/sessions')
+      .send({ source: 'workspace', model: 'hermes-agent', title: 'to-be-deleted' })
+      .expect(200)
+    const { id } = createRes.body.session
+
+    // Seed a message into it
+    const db = new Database(DB_PATH)
+    db.prepare(
+      `INSERT INTO messages (session_id, role, content, timestamp) VALUES (?, 'user', 'hello', ?)`
+    ).run(id, Date.now() / 1000)
+    db.close()
+
+    // Delete the session
+    await request(app).delete(`/api/sessions/${id}`).expect(200, { ok: true })
+
+    // Verify it's gone from the DB
+    const verifyDb = new Database(DB_PATH, { readonly: true })
+    const sessionRow = verifyDb.prepare('SELECT id FROM sessions WHERE id = ?').get(id)
+    const msgCount = (verifyDb.prepare('SELECT COUNT(*) as c FROM messages WHERE session_id = ?').get(id) as { c: number }).c
+    verifyDb.close()
+    expect(sessionRow).toBeUndefined()
+    expect(msgCount).toBe(0)
+  })
+
+  it('DELETE /api/sessions/:id returns 404 for unknown session', async () => {
+    const app = createApp({ apiKey: '', skipStatic: true })
+    await request(app).delete('/api/sessions/nonexistent-id').expect(404)
+  })
 })
 
 describe('server integration — /api/sessions?kind filter', () => {

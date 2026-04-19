@@ -261,6 +261,10 @@ export async function searchMessages(query: string, limit = 20, offset = 0) {
 
 // ── Export / Fork / Download ────────────────────────────
 
+export async function deleteSession(id: string) {
+  return apiFetch<{ ok: boolean }>(`/sessions/${id}`, { method: 'DELETE' })
+}
+
 export async function exportSession(id: string, format: 'markdown' | 'json'): Promise<Blob> {
   const res = await fetch(`${API_BASE}/sessions/${id}/export?format=${format}`)
   if (!res.ok) throw new Error(`Export failed: ${res.status}`)
