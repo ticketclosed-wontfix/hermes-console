@@ -38,7 +38,9 @@ jobs:
           pwd
 
       - name: Install dependencies
-        run: npm ci --omit=dev
+        # Build tools (tsc, vite) live in devDependencies — cannot use --omit=dev.
+        # Safe: only the built artifact (dist/) is served; node_modules is not shipped.
+        run: npm ci
 
       - name: Build (clean)
         run: |
