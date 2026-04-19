@@ -92,21 +92,22 @@ export default function Sidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="px-3 py-1 flex gap-1">
+      <nav className="px-3 py-2 grid grid-cols-5 gap-1">
         {NAV_ITEMS.map(({ path, label, icon: Icon }) => {
           const active = path === '/' ? isChat : location.pathname === path;
           return (
             <Link
               key={path}
               to={path}
-              className={`flex-1 flex flex-col items-center gap-0.5 py-1.5 rounded-md transition-colors ${
+              title={label}
+              className={`group relative flex flex-col items-center justify-center gap-1 py-2 rounded-md transition-colors ${
                 active
                   ? 'bg-primary/15 text-primary'
-                  : 'text-on-surface-variant/50 hover:text-on-surface hover:bg-surface-container-high'
+                  : 'text-on-surface-variant/60 hover:text-on-surface hover:bg-surface-container-high'
               }`}
             >
-              <Icon size={14} />
-              <span className="font-label text-[8px] tracking-widest uppercase">{label}</span>
+              <Icon size={16} strokeWidth={active ? 2.25 : 1.75} />
+              <span className="font-label text-[9px] tracking-wider uppercase leading-none">{label}</span>
             </Link>
           );
         })}
