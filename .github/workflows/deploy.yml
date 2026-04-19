@@ -5,6 +5,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 concurrency:
   group: deploy-hermes-console
   cancel-in-progress: false
@@ -21,7 +24,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           # Build straight into the deployed working tree — the systemd
           # service's WorkingDirectory is /home/nick/projects/hermes-console
@@ -35,7 +38,7 @@ jobs:
           pwd
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --omit=dev
 
       - name: Build (clean)
         run: |
@@ -45,13 +48,19 @@ jobs:
       - name: Sync to deploy directory
         # The checkout lives in the runner's _work dir. Copy the built app
         # into the canonical deploy path that systemd points at.
-        # .env is gitignored and must survive across deploys.
+        # Sensitive files (.env*, .npmrc, *.pem, secrets/) are excluded so
+        # they survive across deploys and aren't removed by --delete.
+        # Expected sudoers rule on the runner host (verify manually):
+        #   nick ALL=(root) NOPASSWD: /bin/systemctl restart hermes-console
         run: |
           set -euo pipefail
           DEPLOY_DIR=/home/nick/projects/hermes-console
           rsync -a --delete \
             --exclude='.git' \
-            --exclude='.env' \
+            --exclude='.env*' \
+            --exclude='.npmrc' \
+            --exclude='*.pem' \
+            --exclude='secrets/' \
             --exclude='node_modules/.vite' \
             --exclude='.github/workflows/_runner_state' \
             ./ "$DEPLOY_DIR/"
