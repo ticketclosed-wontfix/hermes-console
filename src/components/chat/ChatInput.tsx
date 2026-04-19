@@ -10,6 +10,17 @@ type Attachment = {
   mimeType: string;
 };
 
+const CTRL_ENTER_MODE_KEY = 'hermes-console:ctrl-enter-mode';
+
+function readCtrlEnterMode(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return window.localStorage.getItem(CTRL_ENTER_MODE_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
 function fileToAttachment(file: File): Promise<Attachment> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -30,6 +41,7 @@ export default function ChatInput() {
   const [text, setText] = useState('');
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [isDragging, setIsDragging] = useState(false);
+  const [ctrlEnterMode, setCtrlEnterMode] = useState<boolean>(readCtrlEnterMode);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { sendMessage, streaming, cancelStreaming } = useChatStore();
@@ -65,14 +77,23 @@ export default function ChatInput() {
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      if (e.key === 'Enter' && e.ctrlKey) {
-        e.preventDefault();
-        if (!streaming) {
-          handleSend();
-        }
+      if (e.key !== 'Enter') return;
+      // Shift+Enter always inserts a newline — let it through.
+      if (e.shiftKey) return;
+      // IME composition — do not treat as send.
+      if (e.nativeEvent.isComposing) return;
+
+      if (ctrlEnterMode) {
+        // Require Ctrl+Enter to send; plain Enter inserts newline.
+        if (!e.ctrlKey) return;
+      }
+
+      e.preventDefault();
+      if (!streaming) {
+        handleSend();
       }
     },
-    [handleSend, streaming]
+    [handleSend, streaming, ctrlEnterMode]
   );
 
   const handleTextareaChange = useCallback(
@@ -151,6 +172,14 @@ export default function ChatInput() {
     }
   }, [text]);
 
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(CTRL_ENTER_MODE_KEY, ctrlEnterMode ? 'true' : 'false');
+    } catch {
+      // ignore storage failures (private mode, quota, etc.)
+    }
+  }, [ctrlEnterMode]);
+
   const sendDisabled = !text.trim() && attachments.length === 0;
 
   return (
@@ -174,6 +203,19 @@ export default function ChatInput() {
           </span>
         </div>
         <div className="flex items-center gap-2">
+          <label
+            className="flex items-center gap-1.5 cursor-pointer select-none font-label text-[9px] text-on-surface-variant hover:text-on-surface transition-colors"
+            title="When enabled, plain Enter inserts a newline and only Ctrl+Enter sends the message."
+          >
+            <input
+              type="checkbox"
+              checked={ctrlEnterMode}
+              onChange={(e) => setCtrlEnterMode(e.target.checked)}
+              className="h-3 w-3 accent-primary cursor-pointer"
+              aria-label="Require Ctrl+Enter to send"
+            />
+            <span>Require Ctrl+Enter to send</span>
+          </label>
           <button
             type="button"
             onClick={handlePaperclip}
