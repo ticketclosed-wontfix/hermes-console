@@ -295,7 +295,7 @@ export default function Sidebar() {
             ADMIN
           </div>
         </div>
-        <NotificationBell />
+        <NotificationBell dropUp />
         <Link to="/settings" className="text-on-surface-variant/50 hover:text-on-surface transition-colors">
           <Settings size={16} />
         </Link>
