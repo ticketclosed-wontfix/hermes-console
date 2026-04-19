@@ -8,6 +8,7 @@ Type=simple
 User=nick
 WorkingDirectory=/home/nick/projects/hermes-console
 EnvironmentFile=/home/nick/projects/hermes-console/.env
+ExecStartPre=/home/nick/projects/hermes-console/deploy/verify-bundle.sh
 ExecStart=/home/nick/.hermes/node/bin/node --import tsx server/production.ts
 Restart=on-failure
 RestartSec=5
