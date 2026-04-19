@@ -13,11 +13,15 @@ import { Route as TerminalRouteImport } from './routes/terminal'
 import { Route as SkillsRouteImport } from './routes/skills'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SearchRouteImport } from './routes/search'
+import { Route as ReposRouteImport } from './routes/repos'
+import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as MemoryRouteImport } from './routes/memory'
 import { Route as JobsRouteImport } from './routes/jobs'
 import { Route as FilesRouteImport } from './routes/files'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ReposOwnerRepoRouteImport } from './routes/repos/$owner/$repo'
+import { Route as ReposOwnerRepoPullsNumRouteImport } from './routes/repos/$owner/$repo/pulls/$num'
 
 const TerminalRoute = TerminalRouteImport.update({
   id: '/terminal',
@@ -37,6 +41,16 @@ const SettingsRoute = SettingsRouteImport.update({
 const SearchRoute = SearchRouteImport.update({
   id: '/search',
   path: '/search',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReposRoute = ReposRouteImport.update({
+  id: '/repos',
+  path: '/repos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NotificationsRoute = NotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MemoryRoute = MemoryRouteImport.update({
@@ -64,6 +78,16 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ReposOwnerRepoRoute = ReposOwnerRepoRouteImport.update({
+  id: '/$owner/$repo',
+  path: '/$owner/$repo',
+  getParentRoute: () => ReposRoute,
+} as any)
+const ReposOwnerRepoPullsNumRoute = ReposOwnerRepoPullsNumRouteImport.update({
+  id: '/pulls/$num',
+  path: '/pulls/$num',
+  getParentRoute: () => ReposOwnerRepoRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -71,10 +95,14 @@ export interface FileRoutesByFullPath {
   '/files': typeof FilesRoute
   '/jobs': typeof JobsRoute
   '/memory': typeof MemoryRoute
+  '/notifications': typeof NotificationsRoute
+  '/repos': typeof ReposRouteWithChildren
   '/search': typeof SearchRoute
   '/settings': typeof SettingsRoute
   '/skills': typeof SkillsRoute
   '/terminal': typeof TerminalRoute
+  '/repos/$owner/$repo': typeof ReposOwnerRepoRouteWithChildren
+  '/repos/$owner/$repo/pulls/$num': typeof ReposOwnerRepoPullsNumRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -82,10 +110,14 @@ export interface FileRoutesByTo {
   '/files': typeof FilesRoute
   '/jobs': typeof JobsRoute
   '/memory': typeof MemoryRoute
+  '/notifications': typeof NotificationsRoute
+  '/repos': typeof ReposRouteWithChildren
   '/search': typeof SearchRoute
   '/settings': typeof SettingsRoute
   '/skills': typeof SkillsRoute
   '/terminal': typeof TerminalRoute
+  '/repos/$owner/$repo': typeof ReposOwnerRepoRouteWithChildren
+  '/repos/$owner/$repo/pulls/$num': typeof ReposOwnerRepoPullsNumRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -94,10 +126,14 @@ export interface FileRoutesById {
   '/files': typeof FilesRoute
   '/jobs': typeof JobsRoute
   '/memory': typeof MemoryRoute
+  '/notifications': typeof NotificationsRoute
+  '/repos': typeof ReposRouteWithChildren
   '/search': typeof SearchRoute
   '/settings': typeof SettingsRoute
   '/skills': typeof SkillsRoute
   '/terminal': typeof TerminalRoute
+  '/repos/$owner/$repo': typeof ReposOwnerRepoRouteWithChildren
+  '/repos/$owner/$repo/pulls/$num': typeof ReposOwnerRepoPullsNumRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -107,10 +143,14 @@ export interface FileRouteTypes {
     | '/files'
     | '/jobs'
     | '/memory'
+    | '/notifications'
+    | '/repos'
     | '/search'
     | '/settings'
     | '/skills'
     | '/terminal'
+    | '/repos/$owner/$repo'
+    | '/repos/$owner/$repo/pulls/$num'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -118,10 +158,14 @@ export interface FileRouteTypes {
     | '/files'
     | '/jobs'
     | '/memory'
+    | '/notifications'
+    | '/repos'
     | '/search'
     | '/settings'
     | '/skills'
     | '/terminal'
+    | '/repos/$owner/$repo'
+    | '/repos/$owner/$repo/pulls/$num'
   id:
     | '__root__'
     | '/'
@@ -129,10 +173,14 @@ export interface FileRouteTypes {
     | '/files'
     | '/jobs'
     | '/memory'
+    | '/notifications'
+    | '/repos'
     | '/search'
     | '/settings'
     | '/skills'
     | '/terminal'
+    | '/repos/$owner/$repo'
+    | '/repos/$owner/$repo/pulls/$num'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -141,6 +189,8 @@ export interface RootRouteChildren {
   FilesRoute: typeof FilesRoute
   JobsRoute: typeof JobsRoute
   MemoryRoute: typeof MemoryRoute
+  NotificationsRoute: typeof NotificationsRoute
+  ReposRoute: typeof ReposRouteWithChildren
   SearchRoute: typeof SearchRoute
   SettingsRoute: typeof SettingsRoute
   SkillsRoute: typeof SkillsRoute
@@ -175,6 +225,20 @@ declare module '@tanstack/react-router' {
       path: '/search'
       fullPath: '/search'
       preLoaderRoute: typeof SearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/repos': {
+      id: '/repos'
+      path: '/repos'
+      fullPath: '/repos'
+      preLoaderRoute: typeof ReposRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/notifications': {
+      id: '/notifications'
+      path: '/notifications'
+      fullPath: '/notifications'
+      preLoaderRoute: typeof NotificationsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/memory': {
@@ -212,8 +276,44 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/repos/$owner/$repo': {
+      id: '/repos/$owner/$repo'
+      path: '/$owner/$repo'
+      fullPath: '/repos/$owner/$repo'
+      preLoaderRoute: typeof ReposOwnerRepoRouteImport
+      parentRoute: typeof ReposRoute
+    }
+    '/repos/$owner/$repo/pulls/$num': {
+      id: '/repos/$owner/$repo/pulls/$num'
+      path: '/pulls/$num'
+      fullPath: '/repos/$owner/$repo/pulls/$num'
+      preLoaderRoute: typeof ReposOwnerRepoPullsNumRouteImport
+      parentRoute: typeof ReposOwnerRepoRoute
+    }
   }
 }
+
+interface ReposOwnerRepoRouteChildren {
+  ReposOwnerRepoPullsNumRoute: typeof ReposOwnerRepoPullsNumRoute
+}
+
+const ReposOwnerRepoRouteChildren: ReposOwnerRepoRouteChildren = {
+  ReposOwnerRepoPullsNumRoute: ReposOwnerRepoPullsNumRoute,
+}
+
+const ReposOwnerRepoRouteWithChildren = ReposOwnerRepoRoute._addFileChildren(
+  ReposOwnerRepoRouteChildren,
+)
+
+interface ReposRouteChildren {
+  ReposOwnerRepoRoute: typeof ReposOwnerRepoRouteWithChildren
+}
+
+const ReposRouteChildren: ReposRouteChildren = {
+  ReposOwnerRepoRoute: ReposOwnerRepoRouteWithChildren,
+}
+
+const ReposRouteWithChildren = ReposRoute._addFileChildren(ReposRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -221,6 +321,8 @@ const rootRouteChildren: RootRouteChildren = {
   FilesRoute: FilesRoute,
   JobsRoute: JobsRoute,
   MemoryRoute: MemoryRoute,
+  NotificationsRoute: NotificationsRoute,
+  ReposRoute: ReposRouteWithChildren,
   SearchRoute: SearchRoute,
   SettingsRoute: SettingsRoute,
   SkillsRoute: SkillsRoute,

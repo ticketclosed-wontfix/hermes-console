@@ -9,7 +9,16 @@ import { healthRouter } from './routes/health.js'
 import { configRouter } from './routes/config.js'
 import { filesRouter } from './routes/files.js'
 import { searchRouter } from './routes/search.js'
+import { notificationsRouter } from './routes/notifications.js'
+import { githubRouter } from './routes/github.js'
+import { runMigrations, ensureIngestSecret } from './db.js'
 import { attachTerminalWs } from './terminal.js'
+
+// Run DB migrations at import time
+runMigrations()
+
+// Ensure ingest secret is available (generates ephemeral if missing)
+const INGEST_SECRET = ensureIngestSecret()
 
 const app = express()
 const PORT = Number(process.env.PORT || 3001)
@@ -32,6 +41,8 @@ app.use('/api/health', healthRouter)
 app.use('/api/config', configRouter)
 app.use('/api/files', filesRouter)
 app.use('/api/search', searchRouter)
+app.use('/api/notifications', notificationsRouter)
+app.use('/api/github', githubRouter)
 
 // Proxy to gateway — chat, models, jobs, runs
 const gatewayProxy = createProxyMiddleware({

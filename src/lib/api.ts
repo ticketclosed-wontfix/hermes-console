@@ -284,6 +284,131 @@ export async function forkSession(id: string) {
 
 // ── SSE streaming chat ─────────────────────────────────
 
+export type Notification = {
+  id: number
+  source: string
+  repo: string | null
+  kind: string
+  title: string
+  body: string | null
+  url: string | null
+  severity: 'info' | 'warning' | 'error'
+  metadata: string | null
+  created_at: string
+  read_at: string | null
+  dismissed_at: string | null
+}
+
+export async function fetchNotifications(opts: {
+  limit?: number
+  offset?: number
+  unread?: boolean
+  repo?: string
+  kind?: string
+  source?: string
+} = {}) {
+  const params = new URLSearchParams()
+  if (opts.limit) params.set('limit', String(opts.limit))
+  if (opts.offset) params.set('offset', String(opts.offset))
+  if (opts.unread) params.set('unread', 'true')
+  if (opts.repo) params.set('repo', opts.repo)
+  if (opts.kind) params.set('kind', opts.kind)
+  if (opts.source) params.set('source', opts.source)
+  const qs = params.toString()
+  return apiFetch<{ items: Notification[]; total: number; unread_count: number }>(
+    `/notifications?${qs}`,
+  )
+}
+
+export async function markNotificationRead(id: number) {
+  await fetch(`${API_BASE}/notifications/${id}/read`, { method: 'POST' })
+}
+
+export async function markAllNotificationsRead() {
+  const res = await fetch(`${API_BASE}/notifications/mark-all-read`, { method: 'POST' })
+  return res.json() as Promise<{ count: number }>
+}
+
+export async function dismissNotification(id: number) {
+  await fetch(`${API_BASE}/notifications/${id}`, { method: 'DELETE' })
+}
+
+// ── GitHub API types + helpers ──────────────────────
+
+export type GHRepo = {
+  name: string
+  full_name: string
+  private: boolean
+  archived: boolean
+  description: string
+  stargazers_count: number
+  open_issues_count: number
+  pushed_at: string
+  default_branch: string
+}
+
+export type GHIssue = {
+  number: number
+  title: string
+  state: string
+  user: string
+  created_at: string
+  updated_at: string
+  labels: string[]
+  comments: number
+}
+
+export type GHPull = {
+  number: number
+  title: string
+  state: string
+  draft: boolean
+  user: string
+  created_at: string
+  updated_at: string
+  labels: string[]
+  head: string
+  base: string
+  mergeable_state: string | null
+  ci_state: string | null
+}
+
+export type GHCheck = {
+  name: string
+  status: string
+  conclusion: string | null
+  url: string | null
+}
+
+export type GHCheckSuite = {
+  overall: 'success' | 'failure' | 'pending' | 'neutral' | null
+  checks: GHCheck[]
+}
+
+export async function fetchGithubRepos() {
+  return apiFetch<{ repos: GHRepo[] }>('/github/repos')
+}
+
+export async function fetchGithubIssues(owner: string, repo: string, state = 'open') {
+  return apiFetch<{ issues: GHIssue[] }>(
+    `/github/repos/${owner}/${repo}/issues?state=${state}`,
+  )
+}
+
+export async function fetchGithubPulls(owner: string, repo: string, state = 'open') {
+  return apiFetch<{ pulls: GHPull[] }>(
+    `/github/repos/${owner}/${repo}/pulls?state=${state}`,
+  )
+}
+
+export async function fetchGithubChecks(owner: string, repo: string, prNumber: number) {
+  return apiFetch<GHCheckSuite>(
+    `/github/repos/${owner}/${repo}/pulls/${prNumber}/checks`,
+  )
+}
+
+// ── SSE streaming chat ─────────────────────────────────
+
 export type ChatStreamEvent = {
   type: string
   data: Record<string, unknown>
