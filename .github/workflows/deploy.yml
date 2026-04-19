@@ -1,0 +1,74 @@
+name: Deploy to production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-hermes-console
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build and restart hermes-console
+    runs-on: [self-hosted, hermes]
+    timeout-minutes: 15
+    env:
+      # Use the hermes-managed Node (v22) so better-sqlite3's native addon
+      # matches the version the systemd service runs under.
+      PATH: /home/nick/.hermes/node/bin:/usr/local/bin:/usr/bin:/bin
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Build straight into the deployed working tree — the systemd
+          # service's WorkingDirectory is /home/nick/projects/hermes-console
+          # and a clean checkout here doubles as the deploy artifact.
+          clean: true
+
+      - name: Show environment
+        run: |
+          node --version
+          npm --version
+          pwd
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build (clean)
+        run: |
+          rm -rf dist
+          npm run build
+
+      - name: Sync to deploy directory
+        # The checkout lives in the runner's _work dir. Copy the built app
+        # into the canonical deploy path that systemd points at.
+        # .env is gitignored and must survive across deploys.
+        run: |
+          set -euo pipefail
+          DEPLOY_DIR=/home/nick/projects/hermes-console
+          rsync -a --delete \
+            --exclude='.git' \
+            --exclude='.env' \
+            --exclude='node_modules/.vite' \
+            --exclude='.github/workflows/_runner_state' \
+            ./ "$DEPLOY_DIR/"
+
+      - name: Restart service
+        run: sudo -n systemctl restart hermes-console
+
+      - name: Health check
+        run: |
+          set -euo pipefail
+          for i in {1..20}; do
+            if curl -fsS http://127.0.0.1:3001/api/health >/dev/null; then
+              echo "hermes-console healthy after ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "hermes-console failed health check" >&2
+          systemctl status hermes-console --no-pager || true
+          exit 1
