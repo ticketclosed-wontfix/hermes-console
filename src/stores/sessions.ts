@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { Session } from '@/lib/api'
+import type { Session, SessionKind } from '@/lib/api'
 import { fetchSessions, searchSessions, createSession } from '@/lib/api'
 
 type SessionsState = {
@@ -9,10 +9,16 @@ type SessionsState = {
   error: string | null
   activeSessionId: string | null
   searchQuery: string
+  // Which sidebar tab is active — filters the list without hitting a
+  // different endpoint.  Default "chats" so existing behaviour is
+  // preserved on first load (cron/webhook noise stays out of the
+  // primary view).
+  activeKind: SessionKind
 
   load: () => Promise<void>
   search: (query: string) => Promise<void>
   setActive: (id: string | null) => void
+  setKind: (kind: SessionKind) => Promise<void>
   clearSearch: () => void
 
   // Lazy: clears UI state only. No server call.
@@ -30,11 +36,15 @@ export const useSessionsStore = create<SessionsState>((set, get) => ({
   error: null,
   activeSessionId: null,
   searchQuery: '',
+  activeKind: 'chats',
 
   load: async () => {
     set({ loading: true, error: null })
     try {
-      const data = await fetchSessions(100)
+      const { activeKind, searchQuery } = get()
+      const data = searchQuery.trim()
+        ? await searchSessions(searchQuery, 100, activeKind)
+        : await fetchSessions(100, 0, activeKind)
       set({ sessions: data.items, total: data.total, loading: false })
     } catch (err) {
       set({ error: String(err), loading: false })
@@ -44,10 +54,11 @@ export const useSessionsStore = create<SessionsState>((set, get) => ({
   search: async (query: string) => {
     set({ searchQuery: query, loading: true })
     try {
+      const { activeKind } = get()
       if (!query.trim()) {
         return get().load()
       }
-      const data = await searchSessions(query)
+      const data = await searchSessions(query, 20, activeKind)
       set({ sessions: data.items, total: data.total, loading: false })
     } catch (err) {
       set({ error: String(err), loading: false })
@@ -55,6 +66,12 @@ export const useSessionsStore = create<SessionsState>((set, get) => ({
   },
 
   setActive: (id) => set({ activeSessionId: id }),
+
+  setKind: async (kind) => {
+    if (get().activeKind === kind) return
+    set({ activeKind: kind })
+    return get().load()
+  },
 
   clearSearch: () => {
     set({ searchQuery: '' })

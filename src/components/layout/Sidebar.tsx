@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from 'react';
-import { Search, Plus, Settings, MessageSquare, LayoutDashboard, Clock, Puzzle, Brain, FolderOpen, Terminal, Download, FileJson, GitFork } from 'lucide-react';
+import { Search, Plus, Settings, MessageSquare, LayoutDashboard, Clock, Puzzle, Brain, FolderOpen, Terminal, Download, FileJson, GitFork, GitBranch, Bot } from 'lucide-react';
 import { useSessionsStore } from '@/stores/sessions';
+import type { SessionKind } from '@/lib/api';
 import { Link, useLocation, useNavigate } from '@tanstack/react-router';
 import { exportSession, downloadBlob, forkSession } from '@/lib/api';
 
@@ -15,6 +16,14 @@ const NAV_ITEMS: NavItem[] = [
   { path: '/search', label: 'FIND', icon: Search },
   { path: '/terminal', label: 'TERM', icon: Terminal },
   { path: '/settings', label: 'CFG', icon: Settings },
+];
+
+type KindTab = { kind: SessionKind; label: string; icon: typeof MessageSquare };
+const KIND_TABS: KindTab[] = [
+  { kind: 'chats', label: 'CHATS', icon: MessageSquare },
+  { kind: 'github', label: 'GITHUB', icon: GitBranch },
+  { kind: 'cron', label: 'CRON', icon: Clock },
+  { kind: 'agents', label: 'AGENTS', icon: Bot },
 ];
 
 function getGroupLabel(date: Date): string {
@@ -43,7 +52,7 @@ function formatRelativeTime(unixSeconds: number): string {
 }
 
 export default function Sidebar() {
-  const { sessions, load, search, setActive, activeSessionId, searchQuery, loading, startNew } =
+  const { sessions, load, search, setActive, activeSessionId, searchQuery, loading, startNew, activeKind, setKind } =
     useSessionsStore();
   const location = useLocation();
   const navigate = useNavigate();
@@ -113,9 +122,34 @@ export default function Sidebar() {
         })}
       </nav>
 
-      {/* Search — chat only */}
+      {/* Search + Tabs — chat only */}
       {isChat && (
         <>
+          {/* Kind tabs: CHATS / GITHUB / CRON / AGENTS.  Filters the
+              session list via ?kind= on the backend. */}
+          <div className="px-3 pt-2 pb-1 grid grid-cols-4 gap-1">
+            {KIND_TABS.map(({ kind, label, icon: Icon }) => {
+              const active = activeKind === kind;
+              return (
+                <button
+                  key={kind}
+                  onClick={() => setKind(kind)}
+                  title={label}
+                  className={`group relative flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-md transition-colors ${
+                    active
+                      ? 'bg-primary/20 text-primary'
+                      : 'text-on-surface-variant/60 hover:text-on-surface hover:bg-surface-container-high'
+                  }`}
+                >
+                  <Icon size={13} strokeWidth={active ? 2.25 : 1.75} />
+                  <span className="font-label text-[8px] tracking-wider uppercase leading-none">
+                    {label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
           <div className="px-3 py-2">
             <div className="relative">
               <Search
@@ -156,7 +190,13 @@ export default function Sidebar() {
 
         {!loading && sessions.length === 0 && (
           <div className="text-on-surface-variant/40 text-[10px] font-label tracking-widest uppercase text-center py-8">
-            No sessions
+            {activeKind === 'agents'
+              ? 'No subagent sessions yet'
+              : activeKind === 'github'
+              ? 'No GitHub webhook sessions'
+              : activeKind === 'cron'
+              ? 'No cron sessions'
+              : 'No sessions'}
           </div>
         )}
 

@@ -66,9 +66,14 @@ export type MemoryData = {
 
 // ── API calls ──────────────────────────────────────────
 
-export async function fetchSessions(limit = 50, offset = 0) {
+// Tab/kind filter for the sidebar session list.  Aligns with the
+// server's kindFilterSql() in server/routes/sessions.ts.
+export type SessionKind = 'chats' | 'github' | 'cron' | 'agents'
+
+export async function fetchSessions(limit = 50, offset = 0, kind?: SessionKind) {
+  const kindParam = kind ? `&kind=${encodeURIComponent(kind)}` : ''
   return apiFetch<{ items: Session[]; total: number }>(
-    `/sessions?limit=${limit}&offset=${offset}`,
+    `/sessions?limit=${limit}&offset=${offset}${kindParam}`,
   )
 }
 
@@ -93,9 +98,10 @@ export async function fetchMessages(sessionId: string) {
   )
 }
 
-export async function searchSessions(query: string, limit = 20) {
+export async function searchSessions(query: string, limit = 20, kind?: SessionKind) {
+  const kindParam = kind ? `&kind=${encodeURIComponent(kind)}` : ''
   return apiFetch<{ items: Session[]; total: number }>(
-    `/sessions?q=${encodeURIComponent(query)}&limit=${limit}`,
+    `/sessions?q=${encodeURIComponent(query)}&limit=${limit}${kindParam}`,
   )
 }
 

@@ -159,6 +159,87 @@ describe('server integration — /api/sessions', () => {
   })
 })
 
+describe('server integration — /api/sessions?kind filter', () => {
+  // Seed a representative row per source, then assert each tab filter
+  // returns only the expected subset.
+  function seedSession(id: string, source: string, startedAt: number, firstUserMsg?: string) {
+    const db = new Database(DB_PATH)
+    db.prepare(
+      `INSERT INTO sessions (id, source, started_at, message_count) VALUES (?, ?, ?, 0)`
+    ).run(id, source, startedAt)
+    if (firstUserMsg) {
+      db.prepare(
+        `INSERT INTO messages (session_id, role, content, timestamp) VALUES (?, 'user', ?, ?)`
+      ).run(id, firstUserMsg, startedAt + 1)
+    }
+    db.close()
+  }
+
+  it('kind=chats returns CLI/telegram/workspace but not cron/webhook/delegate', async () => {
+    seedSession('cli-1', 'cli', 1000)
+    seedSession('tg-1', 'telegram', 1001)
+    seedSession('ws-1', 'workspace', 1002)
+    seedSession('cron-1', 'cron', 1003)
+    seedSession('wh-1', 'webhook', 1004, 'GitHub event on foo/bar')
+    seedSession('del-1', 'delegate', 1005)
+
+    const app = createApp({ apiKey: '', skipStatic: true })
+    const res = await request(app).get('/api/sessions?kind=chats').expect(200)
+
+    const ids = res.body.items.map((s: { id: string }) => s.id).sort()
+    expect(ids).toEqual(['cli-1', 'tg-1', 'ws-1'])
+    expect(res.body.total).toBe(3)
+  })
+
+  it('kind=cron returns only cron sessions', async () => {
+    seedSession('cli-1', 'cli', 1000)
+    seedSession('cron-1', 'cron', 1001)
+    seedSession('cron-2', 'cron', 1002)
+
+    const app = createApp({ apiKey: '', skipStatic: true })
+    const res = await request(app).get('/api/sessions?kind=cron').expect(200)
+
+    const ids = res.body.items.map((s: { id: string }) => s.id).sort()
+    expect(ids).toEqual(['cron-1', 'cron-2'])
+    expect(res.body.total).toBe(2)
+  })
+
+  it('kind=agents returns only delegate sessions', async () => {
+    seedSession('cli-1', 'cli', 1000)
+    seedSession('del-1', 'delegate', 1001)
+    seedSession('del-2', 'delegate', 1002)
+
+    const app = createApp({ apiKey: '', skipStatic: true })
+    const res = await request(app).get('/api/sessions?kind=agents').expect(200)
+
+    const ids = res.body.items.map((s: { id: string }) => s.id).sort()
+    expect(ids).toEqual(['del-1', 'del-2'])
+    expect(res.body.total).toBe(2)
+  })
+
+  it('kind=github returns only webhook sessions whose first msg mentions GitHub', async () => {
+    seedSession('wh-gh', 'webhook', 1000, 'GitHub event on org/repo')
+    seedSession('wh-other', 'webhook', 1001, 'Stripe invoice.paid payload')
+    seedSession('cli-1', 'cli', 1002, 'hello')
+
+    const app = createApp({ apiKey: '', skipStatic: true })
+    const res = await request(app).get('/api/sessions?kind=github').expect(200)
+
+    const ids = res.body.items.map((s: { id: string }) => s.id)
+    expect(ids).toEqual(['wh-gh'])
+    expect(res.body.total).toBe(1)
+  })
+
+  it('kind is ignored if invalid — behaves like no filter', async () => {
+    seedSession('cli-1', 'cli', 1000)
+    seedSession('cron-1', 'cron', 1001)
+
+    const app = createApp({ apiKey: '', skipStatic: true })
+    const res = await request(app).get('/api/sessions?kind=bogus').expect(200)
+    expect(res.body.total).toBe(2)
+  })
+})
+
 describe('server integration — SPA fallback', () => {
   it('unknown non-API GET returns index.html content when static is enabled', async () => {
     const distDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hermes-dist-'))

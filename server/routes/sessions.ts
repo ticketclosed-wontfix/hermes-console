@@ -16,6 +16,56 @@ function getWriteDb() {
   return new Database(DB_PATH, { fileMustExist: true })
 }
 
+/**
+ * Build a SQL WHERE fragment and its parameter list for a sidebar ``kind`` tab.
+ *
+ * Tabs:
+ *   chats  — user-initiated, non-automated sessions (CLI / TUI / API /
+ *            Telegram / workspace / discord / slack / signal / ...)
+ *   github — webhook-sourced sessions whose route name looks like a
+ *            GitHub handler.  Inferred from the session's first user
+ *            message (webhook handlers render "GitHub event on <repo>"
+ *            as the first line of the prompt).
+ *   cron   — scheduled jobs (source='cron')
+ *   agents — delegated subagents (source='delegate') — populated only
+ *            after the hermes-agent patch lands; empty otherwise.
+ *
+ * Any other value is treated as no filter (returns all sessions).
+ */
+export function kindFilterSql(kind: string | undefined): { sql: string; params: unknown[] } {
+  switch (kind) {
+    case 'chats':
+      return {
+        sql:
+          "s.source IN ('cli','telegram','workspace','api_server',"
+          + "'discord','slack','signal','whatsapp','matrix','mattermost',"
+          + "'homeassistant','email','sms','dingtalk','feishu','wecom',"
+          + "'wecom_callback','weixin','bluebubbles','qqbot','tui','local')",
+        params: [],
+      }
+    case 'github':
+      // Webhook sessions where the first user message mentions a GitHub
+      // event.  Webhook adapter renders "GitHub event on <repo>..." as
+      // the first line of the prompt; matching that string is cheap and
+      // reliable for the github-automation / hermes-console-auto-dev
+      // subscriptions Nick ships today.
+      return {
+        sql:
+          "s.source = 'webhook' AND EXISTS ("
+          + "SELECT 1 FROM messages m WHERE m.session_id = s.id AND m.role='user' "
+          + "AND m.content LIKE '%GitHub event on%' LIMIT 1"
+          + ")",
+        params: [],
+      }
+    case 'cron':
+      return { sql: "s.source = 'cron'", params: [] }
+    case 'agents':
+      return { sql: "s.source = 'delegate'", params: [] }
+    default:
+      return { sql: '1=1', params: [] }
+  }
+}
+
 // GET /api/sessions — list sessions
 router.get('/', (req, res) => {
   try {
@@ -23,6 +73,8 @@ router.get('/', (req, res) => {
     const limit = Math.min(Number(req.query.limit) || 50, 200)
     const offset = Number(req.query.offset) || 0
     const search = (req.query.q as string)?.trim()
+    const kind = (req.query.kind as string)?.trim()
+    const { sql: kindSql, params: kindParams } = kindFilterSql(kind)
 
     let sessions
     if (search) {
@@ -30,21 +82,23 @@ router.get('/', (req, res) => {
         SELECT s.* FROM sessions s
         JOIN messages m ON m.session_id = s.id
         JOIN messages_fts fts ON fts.rowid = m.id
-        WHERE messages_fts MATCH ?
+        WHERE messages_fts MATCH ? AND (${kindSql})
         GROUP BY s.id
         ORDER BY s.started_at DESC
         LIMIT ? OFFSET ?
-      `).all(search, limit, offset)
+      `).all(search, ...kindParams, limit, offset)
     } else {
       sessions = db.prepare(
-        'SELECT * FROM sessions ORDER BY started_at DESC LIMIT ? OFFSET ?'
-      ).all(limit, offset)
+        `SELECT s.* FROM sessions s WHERE ${kindSql} ORDER BY s.started_at DESC LIMIT ? OFFSET ?`
+      ).all(...kindParams, limit, offset)
     }
 
-    const total = db.prepare('SELECT COUNT(*) as count FROM sessions').get() as { count: number }
+    const totalRow = db.prepare(
+      `SELECT COUNT(*) as count FROM sessions s WHERE ${kindSql}`
+    ).get(...kindParams) as { count: number }
     db.close()
 
-    res.json({ items: sessions, total: total.count })
+    res.json({ items: sessions, total: totalRow.count })
   } catch (err) {
     res.status(500).json({ error: String(err) })
   }

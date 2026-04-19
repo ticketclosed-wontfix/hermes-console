@@ -53,6 +53,7 @@ describe('useSessionsStore', () => {
       error: null,
       activeSessionId: null,
       searchQuery: '',
+      activeKind: 'chats',
     })
     vi.clearAllMocks()
   })
@@ -78,7 +79,7 @@ describe('useSessionsStore', () => {
     expect(state.total).toBe(2)
     expect(state.loading).toBe(false)
     expect(state.error).toBeNull()
-    expect(fetchSessions).toHaveBeenCalledWith(100)
+    expect(fetchSessions).toHaveBeenCalledWith(100, 0, 'chats')
   })
 
   it('handles load errors', async () => {
@@ -102,7 +103,32 @@ describe('useSessionsStore', () => {
     const state = useSessionsStore.getState()
     expect(state.sessions).toHaveLength(1)
     expect(state.searchQuery).toBe('Test One')
-    expect(searchSessions).toHaveBeenCalledWith('Test One')
+    expect(searchSessions).toHaveBeenCalledWith('Test One', 20, 'chats')
+  })
+
+  it('changes active kind and reloads the session list', async () => {
+    vi.mocked(fetchSessions).mockResolvedValue({ items: mockSessions, total: 2 })
+
+    await useSessionsStore.getState().setKind('cron')
+
+    const state = useSessionsStore.getState()
+    expect(state.activeKind).toBe('cron')
+    expect(fetchSessions).toHaveBeenLastCalledWith(100, 0, 'cron')
+  })
+
+  it('setKind short-circuits when kind is already active', async () => {
+    vi.mocked(fetchSessions).mockResolvedValue({ items: mockSessions, total: 2 })
+    await useSessionsStore.getState().setKind('chats')  // already default
+    expect(fetchSessions).not.toHaveBeenCalled()
+  })
+
+  it('forwards active kind to search', async () => {
+    vi.mocked(searchSessions).mockResolvedValue({ items: [mockSessions[0]], total: 1 })
+    useSessionsStore.setState({ activeKind: 'github' })
+
+    await useSessionsStore.getState().search('deploy')
+
+    expect(searchSessions).toHaveBeenCalledWith('deploy', 20, 'github')
   })
 
   it('sets active session', () => {
