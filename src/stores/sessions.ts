@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import type { Session, SessionKind } from '@/lib/api'
-import { fetchSessions, searchSessions, createSession } from '@/lib/api'
+import { fetchSessions, searchSessions, createSession, deleteSession } from '@/lib/api'
 
 type SessionsState = {
   sessions: Session[]
@@ -27,6 +27,9 @@ type SessionsState = {
   // Ensures there's a real persisted session id, creating one only if necessary.
   // Called by chat store right before sending the first message.
   ensureActiveSession: (opts?: { model?: string }) => Promise<Session | null>
+
+  // Delete a session and its messages from the server, then remove from local state.
+  deleteSession: (id: string) => Promise<void>
 }
 
 export const useSessionsStore = create<SessionsState>((set, get) => ({
@@ -112,6 +115,19 @@ export const useSessionsStore = create<SessionsState>((set, get) => ({
     } catch (err) {
       set({ error: String(err) })
       return null
+    }
+  },
+
+  deleteSession: async (id: string) => {
+    try {
+      await deleteSession(id)
+      set((s) => ({
+        sessions: s.sessions.filter((x) => x.id !== id),
+        total: Math.max(0, s.total - 1),
+        activeSessionId: s.activeSessionId === id ? null : s.activeSessionId,
+      }))
+    } catch (err) {
+      set({ error: String(err) })
     }
   },
 }))

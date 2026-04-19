@@ -1,5 +1,6 @@
 import React from 'react';
 import { Upload, GitFork, Trash2 } from 'lucide-react';
+import { useSessionsStore } from '@/stores/sessions';
 
 interface Session {
   id: string;
@@ -22,6 +23,8 @@ interface MetadataPanelProps {
 }
 
 const MetadataPanel: React.FC<MetadataPanelProps> = ({ session }) => {
+  const deleteSessionFromStore = useSessionsStore((s) => s.deleteSession);
+
   if (!session) {
     return (
       <div className="w-[280px] h-screen bg-surface-container-low border-l border-outline-variant/20 flex flex-col shrink-0 items-center justify-center">
@@ -38,6 +41,11 @@ const MetadataPanel: React.FC<MetadataPanelProps> = ({ session }) => {
   ];
   const totalTokens = tokenBreakdown.reduce((s, t) => s + t.value, 0);
   const maxVal = Math.max(...tokenBreakdown.map(t => t.value), 1);
+
+  const handleDelete = async () => {
+    if (!confirm('Delete this chat? This cannot be undone.')) return;
+    await deleteSessionFromStore(session.id);
+  };
 
   return (
     <div className="w-[280px] h-screen bg-surface-container-low border-l border-outline-variant/20 flex flex-col shrink-0">
@@ -97,7 +105,10 @@ const MetadataPanel: React.FC<MetadataPanelProps> = ({ session }) => {
         <button className="flex items-center gap-2 font-label text-[10px] text-on-surface-variant">
           <GitFork size={12} /> FORK_SESSION
         </button>
-        <button className="flex items-center gap-2 font-label text-[10px] text-error/60">
+        <button
+          onClick={handleDelete}
+          className="flex items-center gap-2 font-label text-[10px] text-error/60 hover:text-error transition-colors"
+        >
           <Trash2 size={12} /> DELETE
         </button>
       </div>
